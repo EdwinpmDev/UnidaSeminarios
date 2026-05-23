@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Registro de Seminario</title>
+  <link rel="stylesheet" href="./css/usuario.css">
+</head>
+<body>
+  <!-- Overlay de Login: bloquea la UI hasta iniciar sesión -->
+  <div id="loginOverlay" aria-modal="true" role="dialog" aria-labelledby="loginTitle">
+    <div id="loginBox">
+      <h2 id="loginTitle">Iniciar sesión</h2>
+      <div class="grid">
+        <div>
+          <label for="loginUser">Usuario o correo</label>
+          <input type="email" id="loginUser" placeholder="usuario@dominio" autocomplete="username">
+        </div>
+        <div>
+          <label for="loginPass">Contraseña</label>
+          <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
+        </div>
+      </div>
+      <div id="loginError" class="hidden"></div>
+      <div class="row-actions" style="margin-top:10px;">
+        <button id="btnDoLogin" type="button">Entrar</button>
+      </div>
+    </div>
+  </div>
+
+  <header>
+    <!-- Esquina superior izquierda: TecNM (JPG) -->
+    <div class="brand-left">
+      <img src="./assets/img/tecnmBlanco.png" alt="Logo TecNM">
+    </div>
+    <!-- Centro superior: Escudo ITV (PNG) -->
+    <div class="brand-center">
+      <img src="./assets/img/itv.png" alt="itv logo">
+    </div>
+    <h1>Registro de Seminario</h1>
+    <p>Captura paso a paso los datos del estudiante y su evaluación</p>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <div class="steps" aria-hidden="true">
+        <div class="step step-1 active">Paso 1: Datos básicos</div>
+        <div class="step step-2">Paso 2: Seminario</div>
+        <!-- Paso 3 removido -->
+      </div>
+
+      <form id="formSeminario" novalidate>
+        <!-- PASO 1 -->
+        <fieldset aria-describedby="ayudaPaso1">
+          <legend>1) Datos básicos</legend>
+          <div class="grid">
+            <div>
+              <label for="nombre">Nombre del estudiante</label>
+              <input type="text" id="nombre" name="nombre" placeholder="Ej. Juan Pérez" list="listaEvaluados" autocomplete="name" required />
+              <datalist id="listaEvaluados"></datalist>
+            </div>
+            <div>
+              <label for="titulo">Título del proyecto</label>
+              <input type="text" id="titulo" name="titulo" placeholder="Ej. Modelado de datos..." required />
+            </div>
+            <div>
+              <label for="programa">Programa</label>
+              <select id="programa" name="programa" required>
+                <option value="" selected disabled>Selecciona una opción</option>
+                <option value="maestria">Maestría</option>
+                <option value="doctorado">Doctorado</option>
+              </select>
+            </div>
+            <!-- Fecha y Hora programadas -->
+            <div>
+              <label for="fecha">Fecha y hora programadas</label>
+              <div style="display:flex; gap:10px; align-items:center;">
+                <input type="date" id="fecha" name="fecha" placeholder="YYYY-MM-DD" style="flex:0 0 50%">
+                <input type="time" id="hora"  name="hora"  placeholder="HH:MM"      style="flex:0 0 50%">
+              </div>
+            </div>
+          </div>
+          <p id="ayudaPaso1" class="hint">Completa estos tres campos. Luego aparecerán las opciones de seminario.</p>
+          <div id="errPaso1" class="error hidden" role="alert" aria-live="polite"></div>
+        </fieldset>
+
+        <!-- PASO 2 -->
+        <fieldset id="fsSeminario" class="hidden" aria-describedby="ayudaPaso2">
+          <legend>2) Selección de seminario</legend>
+          <div id="listaRadios" class="radio-list" role="radiogroup" aria-label="Tipo de seminario"></div>
+          <p id="ayudaPaso2" class="hint">
+            Para <strong>Maestría</strong>: Protocolo o Culminación.
+            <br>
+            Para <strong>Doctorado</strong>: Protocolo, Primer avance, Segundo avance y Culminación.
+          </p>
+          <div id="errPaso2" class="error hidden" role="alert" aria-live="polite"></div>
+        </fieldset>
+
+        <div class="row-actions">
+          <button type="submit" id="btnEnviar" disabled>Enviar</button>
+        </div>
+      </form>
+
+      <!-- Mensaje de éxito sin referencias a descarga de archivo -->
+      <div id="exito" class="success hidden" role="status" aria-live="polite">
+        Datos guardados correctamente.
+      </div>
+
+      <dl id="resumen" class="summary hidden" aria-live="polite"></dl>
+    </section>
+  </main>
+
+  <script src="./js/usuario.js"></script> 
+</body>
+</html>

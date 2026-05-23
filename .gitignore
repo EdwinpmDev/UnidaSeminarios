@@ -1,1 +1,31 @@
+# Entorno virtual
 .venvUnida
+
+# VARIABLES DE ENTORNO (Credenciales)
+.env
+.env.local
+.env*.local
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Bases de datos
+*.db
+*.sqlite
+*.sqlite3
+
+# LOGS
+*.log
+logs/
+
+# Flask
+instance/

@@ -1,0 +1,240 @@
+:root {
+    --primary: #1B396A;
+    /* Azul TecNM / ITVER */
+    --primary-dark: #132848;
+    /* Azul Oscuro */
+    --accent: #D4AF37;
+    /* Dorado Institucional */
+    --bg: #f0f4f8;
+    --card: #ffffff;
+    --text: #1f2937;
+    --muted: #6b7280;
+    --border: #d1d5db;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* Encabezado Institucional */
+header {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: white;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+header h1 {
+    font-size: 1.6rem;
+    margin-bottom: 5px;
+    letter-spacing: 0.5px;
+}
+
+header p {
+    font-size: 0.9rem;
+    color: #cbd5e1;
+}
+
+/* Contenedor Principal Centrado */
+main {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+}
+
+/* Estructura del Folder / Contenedor Central */
+.folder-container {
+    width: 100%;
+    max-width: 450px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Pestañas del Folder */
+.folder-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 0;
+    width: 100%;
+}
+
+.tab-button {
+    flex: 1;
+    background: #e5e7eb;
+    border: 1px solid var(--border);
+    border-bottom: none;
+    padding: 12px 6px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--muted);
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+    white-space: normal;
+}
+
+.tab-button:hover {
+    background: #f3f4f6;
+    color: var(--primary);
+}
+
+/* Pestaña Activa */
+.tab-button.active {
+    background: var(--card);
+    color: var(--primary);
+    border-color: var(--border);
+    position: relative;
+    box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Cuerpo del Folder */
+.folder-body {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 12px 12px;
+    padding: 35px 30px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+/* Contenido de las Pestañas Principales */
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+    animation: fadeIn 0.25s ease;
+}
+
+/* Contenidos internos para alternar Estudiante/Invitado */
+.sub-form-content {
+    display: none;
+}
+
+.sub-form-content.active {
+    display: block;
+    animation: fadeIn 0.25s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Estilos del Formulario de Login */
+.login-form h3 {
+    color: var(--primary);
+    font-size: 1.4rem;
+    margin-bottom: 5px;
+    text-align: center;
+}
+
+.login-form .form-subtitle {
+    font-size: 0.85rem;
+    color: var(--muted);
+    text-align: center;
+    margin-bottom: 25px;
+    line-height: 1.3;
+}
+
+.input-group {
+    margin-bottom: 20px;
+}
+
+.input-group label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: var(--text);
+}
+
+.input-group input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.95rem;
+    transition: border-color 0.2s;
+}
+
+.input-group input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(27, 57, 106, 0.1);
+}
+
+.btn-submit {
+    width: 100%;
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-top: 10px;
+}
+
+.btn-submit:hover {
+    background-color: var(--primary-dark);
+}
+
+/* Enlace para cambiar de rol dentro de Estudiante */
+.switch-role-container {
+    margin-top: 22px;
+    padding-top: 15px;
+    border-top: 1px dashed var(--border);
+    text-align: center;
+}
+
+.btn-switch-link {
+    background: none;
+    border: none;
+    color: var(--primary);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: underline;
+    transition: color 0.2s;
+}
+
+.btn-switch-link:hover {
+    color: var(--accent);
+}
+
+/* Footer */
+footer {
+    background: #111827;
+    color: #9ca3af;
+    text-align: center;
+    padding: 15px;
+    font-size: 0.8rem;
+    border-top: 3px solid var(--accent);
+}

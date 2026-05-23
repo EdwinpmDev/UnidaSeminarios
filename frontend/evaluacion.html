@@ -1,157 +1,13 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>UNIDA — Sistema de Registro y Evaluación de Seminarios</title>
-  <style>
-    :root {
-      --primary: #1B396A;
-      --primary-dark: #132848;
-      --accent: #D4AF37;
-      --bg: #f4f6f9;
-      --card: #ffffff;
-      --text: #1f2937;
-      --muted: #6b7280;
-      --border: #cbd5e1;
-      --success: #16a34a;
-      --error: #dc2626;
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: system-ui, -apple-system, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.5;
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
-    }
-
-    header {
-      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-      color: white;
-      padding: 25px 20px;
-      text-align: center;
-      border-bottom: 4px solid var(--accent);
-    }
-    header h1 { font-size: 1.5rem; font-weight: 800; }
-    header p { font-size: 0.9rem; opacity: 0.9; margin-top: 4px; }
-
-    main {
-      flex: 1;
-      display: flex;
-      justify-content: center;
-      padding: 30px 15px;
-    }
-
-    .wizard-card {
-      width: 100%;
-      max-width: 800px;
-      background: var(--card);
-      border-radius: 12px;
-      border: 1px solid #e2e8f0;
-      padding: 30px;
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
-    }
-
-    .step-section {
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      padding: 20px;
-      margin-bottom: 25px;
-    }
-    .step-section.disabled {
-      opacity: 0.35;
-      pointer-events: none;
-      background: #f1f5f9;
-    }
-
-    .step-title {
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: var(--primary);
-      margin-bottom: 15px;
-    }
-
-    .form-group { margin-bottom: 15px; }
-    .form-group label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; }
-    .form-group input, .form-group select, .form-group textarea {
-      width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.95rem; background: #fff;
-    }
-    .form-group input:disabled, .form-group select:disabled {
-      background: #e2e8f0; color: #475569;
-    }
-
-    /* Radios como Botones */
-    .radio-container { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 5px; }
-    .radio-btn { flex: 1; min-width: 130px; }
-    .radio-btn input { display: none; }
-    .radio-btn label {
-      display: block; background: #fff; border: 1px solid var(--border); padding: 12px;
-      text-align: center; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.2s;
-    }
-    .radio-btn input:checked + label {
-      background: var(--primary); color: white; border-color: var(--primary);
-    }
-
-    /* Caja Administrativa Protegida */
-    .admin-box {
-      background: #eff6ff;
-      border: 1px solid #bfdbfe;
-      border-radius: 8px;
-      padding: 15px;
-      margin-top: 15px;
-    }
-
-    /* Ventana de Login (Modal) */
-    .modal-overlay {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; z-index: 1000;
-    }
-    .modal-content {
-      background: white; padding: 25px; border-radius: 8px; width: 100%; max-width: 400px;
-      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); border-top: 4px solid var(--primary);
-    }
-    .modal-content h3 { margin-bottom: 15px; color: var(--primary); }
-
-    /* Estilos Cuestionario (Quest) */
-    .quest-card {
-      background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 15px;
-    }
-    .quest-header { font-size: 0.95rem; font-weight: 600; color: var(--primary-dark); margin-bottom: 10px; }
-    .scale-row { display: flex; gap: 4px; flex-wrap: wrap; }
-    .scale-box { flex: 1; min-width: 40px; text-align: center; }
-    .scale-box input { display: none; }
-    .scale-box label {
-      display: block; background: #f1f5f9; border: 1px solid #cbd5e1; padding: 8px 0; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: 700;
-    }
-    .scale-box input:checked + label { background: var(--primary); color: white; border-color: var(--primary); }
-
-    .char-counter { font-size: 0.8rem; text-align: right; margin-top: 4px; color: var(--muted); }
-    .char-counter.valid { color: var(--success); font-weight: bold; }
-
-    .btn-submit {
-      width: 100%; background: var(--primary); color: white; border: none; padding: 14px; border-radius: 6px; font-size: 1rem; font-weight: 700; cursor: pointer; transition: background 0.2s;
-    }
-    .btn-submit:hover { background: var(--primary-dark); }
-    .btn-submit:disabled { background: #cbd5e1; cursor: not-allowed; opacity: 0.7; }
-
-    .btn-secondary {
-      background: #4b5563; color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.9rem; margin-top: 5px;
-    }
-    .btn-secondary:hover { background: #374151; }
-
-    .btn-danger {
-      background: var(--error); color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.9rem; margin-top: 5px;
-    }
-
-    .hidden { display: none !important; }
-    footer { background: #111827; color: #9ca3af; text-align: center; padding: 15px; font-size: 0.8rem; border-top: 3px solid var(--accent); }
-  </style>
+  <link rel="stylesheet" href="./css/evaluacion.css">
 </head>
+
 <body>
 
   <header>
@@ -162,14 +18,15 @@
   <main>
     <div class="wizard-card">
       <form id="evalForm" onsubmit="enviarEvaluacionCompleta(event)">
-        
+
         <div class="step-section" id="sec-paso0">
           <div class="step-title">Paso 0: Identificación del Usuario</div>
           <div class="form-group">
-            <label>Seleccione su Rol</label>
+            <label>Seleccione su rol</label>
             <div class="radio-container">
               <div class="radio-btn">
-                <input type="radio" id="rol-alumno" name="evaluador_rol" value="Estudiante - UNIDA" checked onchange="conmutarModoRol()">
+                <input type="radio" id="rol-alumno" name="evaluador_rol" value="Estudiante - UNIDA" checked
+                  onchange="conmutarModoRol()">
                 <label for="rol-alumno">Estudiante - UNIDA</label>
               </div>
               <div class="radio-btn">
@@ -177,39 +34,45 @@
                 <label for="rol-externo">Externo (Jurado)</label>
               </div>
               <div class="radio-btn">
-                <input type="radio" id="rol-evaluador" name="evaluador_rol" value="Evaluador" onchange="conmutarModoRol()">
+                <input type="radio" id="rol-evaluador" name="evaluador_rol" value="Evaluador"
+                  onchange="conmutarModoRol()">
                 <label for="rol-evaluador">Evaluador 🔒</label>
               </div>
             </div>
           </div>
 
           <div class="form-group">
-            <label for="evaluador_nombre">Escriba su Nombre Completo</label>
-            <input type="text" id="evaluador_nombre" placeholder="Ej. Dr. Francisco Acosta" required oninput="evaluarFlujoProgresivo()">
+            <label for="evaluador_nombre">Escriba su nombre completo</label>
+            <input type="text" id="evaluador_nombre" placeholder="Ej. Dr. Francisco Acosta" required
+              oninput="evaluarFlujoProgresivo()">
           </div>
 
           <div id="bloque-admin-captura" class="admin-box hidden">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-              <h4 style="font-size: 0.95rem; color: var(--primary-dark);">🛠️ Panel de Carga Oficial de Estudiantes (Autorizado)</h4>
-              <span style="background:var(--success); color:white; font-size:0.75rem; font-weight:bold; padding:2px 8px; border-radius:20px;">Sesión Activa</span>
+              <h4 style="font-size: 0.95rem; color: var(--primary-dark);">🛠️ Panel de Carga Oficial de Estudiantes
+                (Autorizado)</h4>
+              <span
+                style="background:var(--success); color:white; font-size:0.75rem; font-weight:bold; padding:2px 8px; border-radius:20px;">Sesión
+                Activa</span>
             </div>
-            
+
             <div class="form-group">
-              <label>Nombre Completo del Alumno</label>
+              <label>Nombre completo del alumno</label>
               <input type="text" id="reg_alumno_nombre" placeholder="Ej. Alan García López">
             </div>
             <div class="form-group">
-              <label>Título del Proyecto de Tesis</label>
+              <label>Título del proyecto de tesis</label>
               <input type="text" id="reg_alumno_proyecto" placeholder="Ej. Framework de Cómputo Móvil...">
             </div>
             <div class="form-group">
-              <label>Programa Académico</label>
+              <label>Programa académico</label>
               <select id="reg_alumno_programa">
                 <option value="Maestría">Maestría</option>
                 <option value="Doctorado">Doctorado</option>
               </select>
             </div>
-            <button type="button" class="btn-secondary" onclick="registrarNuevoEstudianteEnLista()">Registrar Estudiante</button>
+            <button type="button" class="btn-secondary" onclick="registrarNuevoEstudianteEnLista()">Registrar
+              estudiante</button>
           </div>
         </div>
 
@@ -219,16 +82,18 @@
             <label for="select-evaluado">Seleccione el estudiante o proyecto a evaluar</label>
             <select id="select-evaluado" required onchange="cargarDatosAlumnoAutomático()">
               <option value="" selected disabled>-- Elija un alumno de la lista oficial --</option>
-              <option value="alumno1" data-proyecto="Framework de Cómputo Móvil para el Monitoreo de Signos Vitales" data-programa="Maestría">Alan García López — Proyecto: Framework de Cómputo Móvil</option>
-              <option value="alumno2" data-proyecto="Optimización Heurística de Algoritmos Criptográficos en Redes IoT" data-programa="Doctorado">Elena Martínez Ruiz — Proyecto: Optimización Heurística</option>
+              <option value="alumno1" data-proyecto="Framework de Cómputo Móvil para el Monitoreo de Signos Vitales"
+                data-programa="Maestría">Alan García López — Proyecto: Framework de Cómputo Móvil</option>
+              <option value="alumno2" data-proyecto="Optimización Heurística de Algoritmos Criptográficos en Redes IoT"
+                data-programa="Doctorado">Elena Martínez Ruiz — Proyecto: Optimización Heurística</option>
             </select>
           </div>
           <div class="form-group">
-            <label>Título del Proyecto Seleccionado</label>
+            <label>Título del proyecto seleccionado</label>
             <input type="text" id="proyecto_titulo" placeholder="Se autocompleta automáticamente..." disabled>
           </div>
           <div class="form-group">
-            <label>Programa Detectado</label>
+            <label>Programa detectado</label>
             <input type="text" id="proyecto_programa" placeholder="Se autocompleta..." disabled>
           </div>
         </div>
@@ -236,38 +101,44 @@
         <div class="step-section disabled" id="sec-paso2">
           <div class="step-title">Paso 2: Tipo de Seminario</div>
           <div class="form-group">
-            <label>Avance Correspondiente</label>
+            <label>Avance correspondiente</label>
             <div class="radio-container" id="contenedor-seminarios-dinamicos">
-              </div>
+            </div>
           </div>
         </div>
 
         <div class="step-section disabled" id="sec-paso3">
-          <div class="step-title">Paso 3: Criterios de Evaluación Oficiales ("Quest")</div>
-          
-          <h4 style="font-size:0.9rem; color:var(--primary); margin-bottom:15px;">I. Exposición Oral (P1 a P8 — Escala del 1 al 10)</h4>
+          <div class="step-title">Paso 3: Criterios de evaluación oficiales ("Quest")</div>
+
+          <h4 style="font-size:0.9rem; color:var(--primary); margin-bottom:15px;">I. Exposición Oral (P1 a P8 — Escala
+            del 1 al 10)</h4>
           <div id="quest-container-10"></div>
 
-          <h4 style="font-size:0.9rem; color:var(--primary); margin: 25px 0 15px;">II. Reporte Escrito y Debate (P9 a P12 — Escala del 1 al 5)</h4>
+          <h4 style="font-size:0.9rem; color:var(--primary); margin: 25px 0 15px;">II. Reporte escrito y debate (P9 a
+            P12 — Escala del 1 al 5)</h4>
           <div id="quest-container-5"></div>
 
           <div class="form-group" style="margin-top: 25px;">
-            <label style="color: var(--primary-dark);" for="txt-comentarios">Observaciones y Retroalimentación (Mínimo 50 caracteres) *</label>
-            <textarea id="txt-comentarios" rows="4" placeholder="Ingrese detalladamente los comentarios y correcciones del sínodo..." required oninput="validarComentarios()"></textarea>
+            <label style="color: var(--primary-dark);" for="txt-comentarios">Observaciones y retroalimentación (Mínimo
+              50 caracteres) *</label>
+            <textarea id="txt-comentarios" rows="4"
+              placeholder="Ingrese detalladamente los comentarios y correcciones del sínodo..." required
+              oninput="validarComentarios()"></textarea>
             <div id="comentarios-info" class="char-counter">0 / 50 caracteres</div>
           </div>
         </div>
 
-        <button type="submit" id="btn-enviar-todo" class="btn-submit" disabled>Enviar Evaluación Completa</button>
+        <button type="submit" id="btn-enviar-todo" class="btn-submit" disabled>Enviar evaluación completa</button>
       </form>
     </div>
   </main>
 
   <div id="modal-login" class="modal-overlay hidden">
     <div class="modal-content">
-      <h3>🔒 Autenticación de Evaluador</h3>
-      <p style="font-size: 0.85rem; color: var(--muted); margin-bottom: 15px;">Este módulo requiere credenciales administrativas de acceso.</p>
-      
+      <h3>🔒 Autenticación de evaluador</h3>
+      <p style="font-size: 0.85rem; color: var(--muted); margin-bottom: 15px;">Este módulo requiere credenciales
+        administrativas de acceso.</p>
+
       <div class="form-group">
         <label for="mod_usuario">Usuario</label>
         <input type="text" id="mod_usuario" placeholder="Ingrese su identificador">
@@ -276,12 +147,15 @@
         <label for="mod_password">Contraseña</label>
         <input type="password" id="mod_password" placeholder="••••••••">
       </div>
-      
-      <p id="error-login" style="color: var(--error); font-size: 0.85rem; margin-bottom: 10px;" class="hidden">⚠️ Credenciales incorrectas. Intente de nuevo.</p>
-      
+
+      <p id="error-login" style="color: var(--error); font-size: 0.85rem; margin-bottom: 10px;" class="hidden">⚠️
+        Credenciales incorrectas. Intente de nuevo.</p>
+
       <div style="display: flex; gap: 10px; justify-content: flex-end;">
-        <button type="button" class="btn-secondary" style="background:#9ca3af;" onclick="cancelarLoginEvaluador()">Cancelar</button>
-        <button type="button" class="btn-submit" style="width: auto; padding: 10px 20px;" onclick="procesarLoginEvaluador()">Ingresar</button>
+        <button type="button" class="btn-secondary" style="background:#9ca3af;"
+          onclick="cancelarLoginEvaluador()">Cancelar</button>
+        <button type="button" class="btn-submit" style="width: auto; padding: 10px 20px;"
+          onclick="procesarLoginEvaluador()">Ingresar</button>
       </div>
     </div>
   </div>
@@ -289,193 +163,7 @@
   <footer>
     &copy; 2026 Instituto Tecnológico de Veracruz &middot; UNIDA &middot; Todos los derechos reservados.
   </footer>
-
-  <script>
-    const bancoPreguntas = {
-      1: "Planteamiento del problema, justificación y definición clara de objetivos.",
-      2: "Dominio, rigor científico y profundidad conceptual del tema expuesto.",
-      3: "Metodología utilizada, materiales, desarrollo y consistencia de la investigación.",
-      4: "Resultados obtenidos, conclusiones alcanzadas o aportaciones esperadas.",
-      5: "Uso correcto del tiempo asignado para la exposición oral.",
-      6: "Claridad, fluidez, dicción y propiedad en la expresión oral.",
-      7: "Calidad de las diapositivas, recursos audiovisuales y herramientas de apoyo.",
-      8: "Organización, estructura y secuencia lógica de la presentación.",
-      9: "Estructura formal del reporte escrito entregado previamente.",
-      10: "Actualización, pertinencia y calidad de las referencias bibliográficas.",
-      11: "Cumplimiento del plan de trabajo y cronograma establecido.",
-      12: "Capacidad de respuesta y debate crítico ante las preguntas del sínodo."
-    };
-
-    let esEvaluadorAutenticado = false;
-    let contadorAlumnos = 3;
-
-    // Conmutador de roles dinámico
-    function conmutarModoRol() {
-      const rolSeleccionado = document.querySelector('input[name="evaluador_rol"]:checked').value;
-      const bloqueAdmin = document.getElementById('bloque-admin-captura');
-      
-      if (rolSeleccionado === "Evaluador") {
-        if (!esEvaluadorAutenticado) {
-          // Abrir modal de seguridad si no está logueado
-          document.getElementById('modal-login').classList.remove('hidden');
-          document.getElementById('mod_usuario').focus();
-        } else {
-          bloqueAdmin.classList.remove('hidden');
-        }
-      } else {
-        bloqueAdmin.classList.add('hidden');
-      }
-      evaluarFlujoProgresivo();
-    }
-
-    // Validación simulada de Credenciales de Evaluador
-    function procesarLoginEvaluador() {
-      const user = document.getElementById('mod_usuario').value.trim();
-      const pass = document.getElementById('mod_password').value.trim();
-      const errorMsg = document.getElementById('error-login');
-
-      // Credenciales fijas de ejemplo (reemplazables por tu API/BD backend)
-      if (user === "admin" && pass === "unida2026") {
-        esEvaluadorAutenticado = true;
-        errorMsg.classList.add('hidden');
-        document.getElementById('modal-login').classList.add('hidden');
-        document.getElementById('bloque-admin-captura').classList.remove('hidden');
-        
-        // Limpiar formulario modal
-        document.getElementById('mod_usuario').value = '';
-        document.getElementById('mod_password').value = '';
-        evaluarFlujoProgresivo();
-      } else {
-        errorMsg.classList.remove('hidden');
-      }
-    }
-
-    function cancelarLoginEvaluador() {
-      // Regresar la selección al rol "Estudiante" por seguridad
-      document.getElementById('rol-alumno').checked = true;
-      document.getElementById('modal-login').classList.add('hidden');
-      document.getElementById('error-login').classList.add('hidden');
-      conmutarModoRol();
-    }
-
-    // Registro en caliente de estudiantes para la lista del paso 1
-    function registrarNuevoEstudianteEnLista() {
-      const nombre = document.getElementById('reg_alumno_nombre').value.trim();
-      const proyecto = document.getElementById('reg_alumno_proyecto').value.trim();
-      const programa = document.getElementById('reg_alumno_programa').value;
-      const selectEvaluado = document.getElementById('select-evaluado');
-
-      if (!nombre || !proyecto) {
-        alert("Por favor, capture el nombre del alumno y el título del proyecto completo.");
-        return;
-      }
-
-      const nuevaOpcion = document.createElement('option');
-      nuevaOpcion.value = `alumno_dinamico_${contadorAlumnos++}`;
-      nuevaOpcion.setAttribute('data-proyecto', proyecto);
-      nuevaOpcion.setAttribute('data-programa', programa);
-      nuevaOpcion.textContent = `${nombre} — Proyecto: ${proyecto.substring(0, 45)}...`;
-      
-      selectEvaluado.appendChild(nuevaOpcion);
-
-      // Limpiar campos de captura
-      document.getElementById('reg_alumno_nombre').value = '';
-      document.getElementById('reg_alumno_proyecto').value = '';
-      
-      alert(`¡Estudiante "${nombre}" registrado con éxito en la lista desplegable!`);
-      evaluarFlujoProgresivo();
-    }
-
-    // Desbloqueo incremental
-    function evaluarFlujoProgresivo() {
-      const nombreEvaluador = document.getElementById('evaluador_nombre').value.trim();
-      document.getElementById('sec-paso1').classList.toggle('disabled', nombreEvaluador.length < 4);
-    }
-
-    // Autocompletado del estudiante seleccionado
-    function cargarDatosAlumnoAutomático() {
-      const select = document.getElementById('select-evaluado');
-      const opcionSeleccionada = select.options[select.selectedIndex];
-      
-      const campoProyecto = document.getElementById('proyecto_titulo');
-      const campoPrograma = document.getElementById('proyecto_programa');
-      
-      const proyecto = opcionSeleccionada.getAttribute('data-proyecto');
-      const programa = opcionSeleccionada.getAttribute('data-programa');
-
-      campoProyecto.value = proyecto;
-      campoPrograma.value = programa;
-
-      renderSeminariosDinamicos(programa);
-      document.getElementById('sec-paso2').classList.remove('disabled');
-    }
-
-    // Render condicional del seminario
-    function renderSeminariosDinamicos(programa) {
-      const contenedor = document.getElementById('contenedor-seminarios-dinamicos');
-      contenedor.innerHTML = '';
-      
-      let opciones = programa === "Maestría" 
-        ? [{ id: "sem-proto", label: "Protocolo" }, { id: "sem-culmi", label: "Culminación" }]
-        : [{ id: "sem-proto", label: "Protocolo" }, { id: "sem-av1", label: "Primer avance" }, { id: "sem-av2", label: "Segundo avance" }, { id: "sem-culmi", label: "Culminación" }];
-
-      opciones.forEach(opt => {
-        contenedor.innerHTML += `
-          <div class="radio-btn">
-            <input type="radio" id="${opt.id}" name="tipo_seminario" value="${opt.label}" required onchange="desbloquearPaso3()">
-            <label for="${opt.id}">${opt.label}</label>
-          </div>`;
-      });
-    }
-
-    function desbloquearPaso3() {
-      document.getElementById('sec-paso3').classList.remove('disabled');
-      validarComentarios();
-    }
-
-    // Inyección de preguntas
-    function construirQuest(containerId, min, max, maxEscala) {
-      const container = document.getElementById(containerId);
-      for (let i = min; i <= max; i++) {
-        let optionsHtml = '';
-        for (let j = 1; j <= maxEscala; j++) {
-          optionsHtml += `
-            <div class="scale-box">
-              <input type="radio" id="P${i}-${j}" name="P${i}" value="${j}" required onchange="validarComentarios()">
-              <label for="P${i}-${j}">${j}</label>
-            </div>`;
-        }
-        container.innerHTML += `
-          <div class="quest-card">
-            <div class="quest-header">P${i}. ${bancoPreguntas[i]}</div>
-            <div class="scale-row">${optionsHtml}</div>
-          </div>`;
-      }
-    }
-    construirQuest('quest-container-10', 1, 8, 10);
-    construirQuest('quest-container-5', 9, 12, 5);
-
-    // Validación de comentarios obligatorios
-    function validarComentarios() {
-      const texto = document.getElementById('txt-comentarios').value.trim();
-      const info = document.getElementById('comentarios-info');
-      const formValido = document.getElementById('evalForm').checkValidity();
-      
-      info.textContent = `${texto.length} / 50 caracteres`;
-
-      if (texto.length >= 50 && formValido) {
-        info.className = "char-counter valid";
-        document.getElementById('btn-enviar-todo').disabled = false;
-      } else {
-        info.className = "char-counter";
-        document.getElementById('btn-enviar-todo').disabled = true;
-      }
-    }
-
-    function enviarEvaluacionCompleta(event) {
-      event.preventDefault();
-      alert("¡Evaluación de Seminario registrada de manera exitosa!");
-    }
-  </script>
+  <script src="./js/evaluacion.js"></script>
 </body>
+
 </html>

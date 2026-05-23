@@ -1,239 +1,13 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>UNIDA — Sistema de Seminarios de Posgrado</title>
-  <style>
-    :root {
-      --primary: #1B396A;      /* Azul TecNM / ITVER */
-      --primary-dark: #132848; /* Azul Oscuro */
-      --accent: #D4AF37;       /* Dorado Institucional */
-      --bg: #f0f4f8;
-      --card: #ffffff;
-      --text: #1f2937;
-      --muted: #6b7280;
-      --border: #d1d5db;
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    
-    body {
-      font-family: system-ui, -apple-system, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
-    }
-
-    /* Encabezado Institucional */
-    header {
-      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-      color: white;
-      padding: 20px;
-      text-align: center;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    }
-
-    header h1 {
-      font-size: 1.6rem;
-      margin-bottom: 5px;
-      letter-spacing: 0.5px;
-    }
-
-    header p {
-      font-size: 0.9rem;
-      color: #cbd5e1;
-    }
-
-    /* Contenedor Principal Centrado */
-    main {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 40px 20px;
-    }
-
-    /* Estructura del Folder / Contenedor Central */
-    .folder-container {
-      width: 100%;
-      max-width: 450px;
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* Pestañas del Folder */
-    .folder-tabs {
-      display: flex;
-      gap: 4px;
-      padding-left: 10px;
-    }
-
-    .tab-button {
-      flex: 1;
-      background: #e5e7eb;
-      border: 1px solid var(--border);
-      border-bottom: none;
-      padding: 12px 6px;
-      font-size: 0.88rem;
-      font-weight: 600;
-      color: var(--muted);
-      border-top-left-radius: 8px;
-      border-top-right-radius: 8px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      text-align: center;
-      white-space: nowrap;
-    }
-
-    .tab-button:hover {
-      background: #f3f4f6;
-      color: var(--primary);
-    }
-
-    /* Pestaña Activa */
-    .tab-button.active {
-      background: var(--card);
-      color: var(--primary);
-      border-color: var(--border);
-      position: relative;
-      margin-bottom: -1px;
-      z-index: 2;
-      box-shadow: 0 -2px 4px rgba(0,0,0,0.05);
-    }
-
-    /* Cuerpo del Folder */
-    .folder-body {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 0 0 12px 12px;
-      border-top-right-radius: 12px; 
-      padding: 35px 30px;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-      z-index: 1;
-    }
-
-    /* Contenido de las Pestañas Principales */
-    .tab-content {
-      display: none;
-    }
-
-    .tab-content.active {
-      display: block;
-    }
-
-    /* Contenidos internos para alternar Estudiante/Invitado */
-    .sub-form-content {
-      display: none;
-    }
-
-    .sub-form-content.active {
-      display: block;
-      animation: fadeIn 0.25s ease;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(5px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* Estilos del Formulario de Login */
-    .login-form h3 {
-      color: var(--primary);
-      font-size: 1.4rem;
-      margin-bottom: 5px;
-      text-align: center;
-    }
-
-    .login-form .form-subtitle {
-      font-size: 0.85rem;
-      color: var(--muted);
-      text-align: center;
-      margin-bottom: 25px;
-      line-height: 1.3;
-    }
-
-    .input-group {
-      margin-bottom: 20px;
-    }
-
-    .input-group label {
-      display: block;
-      font-size: 0.85rem;
-      font-weight: 600;
-      margin-bottom: 6px;
-      color: var(--text);
-    }
-
-    .input-group input {
-      width: 100%;
-      padding: 10px 12px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      font-size: 0.95rem;
-      transition: border-color 0.2s;
-    }
-
-    .input-group input:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(27, 57, 106, 0.1);
-    }
-
-    .btn-submit {
-      width: 100%;
-      background-color: var(--primary);
-      color: white;
-      border: none;
-      padding: 12px;
-      border-radius: 6px;
-      font-weight: 600;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: background-color 0.2s;
-      margin-top: 10px;
-    }
-
-    .btn-submit:hover {
-      background-color: var(--primary-dark);
-    }
-
-    /* Enlace para cambiar de rol dentro de Estudiante */
-    .switch-role-container {
-      margin-top: 22px;
-      padding-top: 15px;
-      border-top: 1px dashed var(--border);
-      text-align: center;
-    }
-
-    .btn-switch-link {
-      background: none;
-      border: none;
-      color: var(--primary);
-      font-size: 0.85rem;
-      font-weight: 600;
-      cursor: pointer;
-      text-decoration: underline;
-      transition: color 0.2s;
-    }
-
-    .btn-switch-link:hover {
-      color: var(--accent);
-    }
-
-    /* Footer */
-    footer {
-      background: #111827;
-      color: #9ca3af;
-      text-align: center;
-      padding: 15px;
-      font-size: 0.8rem;
-      border-top: 3px solid var(--accent);
-    }
-  </style>
+  <link rel='stylesheet' href='./css/login.css'>
 </head>
+
 <body>
 
   <header>
@@ -243,54 +17,57 @@
 
   <main>
     <div class="folder-container">
-      
+
       <div class="folder-tabs">
-        <button id="btn-tab-profesor" class="tab-button active" onclick="cambiarPestañaPrincipal('profesor')">Profesor UNIDA</button>
-        <button id="btn-tab-estudiante" class="tab-button" onclick="cambiarPestañaPrincipal('estudiante')">Estudiante</button>
-        <button id="btn-tab-evaluador" class="tab-button" onclick="cambiarPestañaPrincipal('evaluador')">Evaluador</button>
+        <button id="btn-tab-profesor" class="tab-button active" onclick="cambiarPestañaPrincipal('profesor')">Profesor
+          UNIDA</button>
+        <button id="btn-tab-estudiante" class="tab-button"
+          onclick="cambiarPestañaPrincipal('estudiante')">Estudiante</button>
+        <button id="btn-tab-evaluador" class="tab-button"
+          onclick="cambiarPestañaPrincipal('evaluador')">Evaluador</button>
       </div>
 
       <div class="folder-body">
-        
+
         <div id="tab-profesor" class="tab-content active">
           <form class="login-form" action="/login-profesor" method="POST">
             <h3>Profesor UNIDA</h3>
             <p class="form-subtitle">Gestión de alumnos, asignación de jurados y reportes.</p>
-            
+
             <div class="input-group">
               <label for="user-profesor">Correo Institucional / Usuario</label>
               <input type="text" id="user-profesor" name="username" placeholder="ejemplo@veracruz.tecnm.mx" required />
             </div>
-            
+
             <div class="input-group">
               <label for="pass-profesor">Contraseña</label>
               <input type="password" id="pass-profesor" name="password" placeholder="••••••••" required />
             </div>
-            
+
             <button type="submit" class="btn-submit">Iniciar Sesión</button>
           </form>
         </div>
 
         <div id="tab-estudiante" class="tab-content">
-          
+
           <div id="sub-form-estudiante" class="sub-form-content active">
             <form class="login-form" action="/login-estudiante" method="POST">
               <h3>Acceso Estudiantes</h3>
               <p class="form-subtitle">Consulta de fechas asignadas, estatus y evaluaciones.</p>
-              
+
               <div class="input-group">
                 <label for="control-estudiante">No. de Control</label>
                 <input type="text" id="control-estudiante" name="username" placeholder="E12345678" required />
               </div>
-              
+
               <div class="input-group">
                 <label for="pass-estudiante">Contraseña</label>
                 <input type="password" id="pass-estudiante" name="password" placeholder="••••••••" required />
               </div>
-              
+
               <button type="submit" class="btn-submit">Ingresar al Portal</button>
             </form>
-            
+
             <div class="switch-role-container">
               <button class="btn-switch-link" onclick="conmutarSubFormulario('invitado')">
                 ¿Eres Invitado? Ingresa aquí
@@ -302,15 +79,16 @@
             <form class="login-form" action="/login-invitado" method="POST">
               <h3>Acceso Invitado</h3>
               <p class="form-subtitle">Ingresa con tu enlace especial o clave temporal proporcionada.</p>
-              
+
               <div class="input-group">
                 <label for="code-invitado">Código de Invitación</label>
-                <input type="text" id="code-invitado" name="guest_code" placeholder="invitado-xyz" style="text-align: center;" required />
+                <input type="text" id="code-invitado" name="guest_code" placeholder="invitado-xyz"
+                  style="text-align: center;" required />
               </div>
-              
+
               <button type="submit" class="btn-submit">Acceder</button>
             </form>
-            
+
             <div class="switch-role-container">
               <button class="btn-switch-link" onclick="conmutarSubFormulario('estudiante')">
                 Regresar al Login de Estudiantes
@@ -324,12 +102,13 @@
           <form class="login-form" action="/login-evaluador" method="POST">
             <h3>Evaluador</h3>
             <p class="form-subtitle">Acceso rápido para la evaluación en tiempo real de seminarios.</p>
-            
+
             <div class="input-group">
               <label for="code-evaluador">Clave de Acceso al Seminario</label>
-              <input type="text" id="code-evaluador" name="seminar_code" placeholder="canek-2026-xyz" style="text-align: center; font-family: monospace;" required />
+              <input type="text" id="code-evaluador" name="seminar_code" placeholder="canek-2026-xyz"
+                style="text-align: center; font-family: monospace;" required />
             </div>
-            
+
             <button type="submit" class="btn-submit">Validar e Ingresar</button>
           </form>
         </div>
@@ -341,27 +120,7 @@
   <footer>
     &copy; 2026 Instituto Tecnológico de Veracruz &middot; UNIDA &middot; Todos los derechos reservados.
   </footer>
-
-  <script>
-    // Control de las tres pestañas principales del folder
-    function cambiarPestañaPrincipal(rolId) {
-      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-      document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
-
-      document.getElementById('tab-' + rolId).classList.add('active');
-      document.getElementById('btn-tab-' + rolId).classList.add('active');
-
-      // Si vuelves a la pestaña de estudiante, asegura restablecer al subformulario de estudiante primero
-      if(rolId === 'estudiante') {
-        conmutarSubFormulario('estudiante');
-      }
-    }
-
-    // Intercambio rápido de formularios internos en la pestaña de estudiante
-    function conmutarSubFormulario(subRol) {
-      document.querySelectorAll('.sub-form-content').forEach(sf => sf.classList.remove('active'));
-      document.getElementById('sub-form-' + subRol).classList.add('active');
-    }
-  </script>
+  <script src="./js/login.js"></script>
 </body>
+
 </html>
