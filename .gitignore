@@ -1,18 +1,26 @@
 # Entorno virtual
-.venvUnida
+.venv/
+venv/
+.venvUnida/
 
-# VARIABLES DE ENTORNO (Credenciales)
+# Variables de entorno
 .env
-.env.local
-.env*.local
+.env.*
+!.env.example
 
 # Python
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
+*$py.class
+
+# Distribución / build
+build/
+dist/
+*.egg-info/
 
 # IDE
 .vscode/
+.idea/
 
 # OS
 .DS_Store
@@ -20,12 +28,12 @@ Thumbs.db
 
 # Bases de datos
 *.db
-*.sqlite
 *.sqlite3
 
-# LOGS
+# Logs
 *.log
 logs/
 
 # Flask
 instance/
+.pytest_cache/

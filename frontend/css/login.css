@@ -27,7 +27,7 @@ body {
     min-height: 100vh;
 }
 
-/* Encabezado Institucional */
+/* Encabezado institucional */
 header {
     background: linear-gradient(135deg, var(--primary), var(--primary-dark));
     color: white;
@@ -47,7 +47,7 @@ header p {
     color: #cbd5e1;
 }
 
-/* Contenedor Principal Centrado */
+/* Contenedor principal centrado */
 main {
     flex: 1;
     display: flex;
@@ -56,7 +56,7 @@ main {
     padding: 40px 20px;
 }
 
-/* Estructura del Folder / Contenedor Central */
+/* Estructura del folder / Contenedor central */
 .folder-container {
     width: 100%;
     max-width: 450px;
@@ -64,7 +64,7 @@ main {
     flex-direction: column;
 }
 
-/* Pestañas del Folder */
+/* Pestañas del folder */
 .folder-tabs {
     display: flex;
     gap: 4px;
@@ -94,7 +94,7 @@ main {
     color: var(--primary);
 }
 
-/* Pestaña Activa */
+/* Pestaña activa */
 .tab-button.active {
     background: var(--card);
     color: var(--primary);
@@ -103,7 +103,7 @@ main {
     box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.05);
 }
 
-/* Cuerpo del Folder */
+/* Cuerpo del folder */
 .folder-body {
     background: var(--card);
     border: 1px solid var(--border);
@@ -113,7 +113,7 @@ main {
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
 }
 
-/* Contenido de las Pestañas Principales */
+/* Contenido de las pestañas principales */
 .tab-content {
     display: none;
 }
@@ -145,7 +145,7 @@ main {
     }
 }
 
-/* Estilos del Formulario de Login */
+/* Estilos del formulario de login */
 .login-form h3 {
     color: var(--primary);
     font-size: 1.4rem;
@@ -206,7 +206,7 @@ main {
     background-color: var(--primary-dark);
 }
 
-/* Enlace para cambiar de rol dentro de Estudiante */
+/* Enlace para cambiar de rol dentro de estudiante */
 .switch-role-container {
     margin-top: 22px;
     padding-top: 15px;
@@ -237,4 +237,19 @@ footer {
     padding: 15px;
     font-size: 0.8rem;
     border-top: 3px solid var(--accent);
+}
+
+.login-error {
+    color: #b91c1c;
+    background: #fee2e2;
+    border: 1px solid #fca5a5;
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    margin-top: 14px;
+    text-align: center;
+}
+
+.login-error.hidden {
+    display: none;
 }

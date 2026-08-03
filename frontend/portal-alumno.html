@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Portal — Estudiante</title>
+    <link rel="stylesheet" href="./css/usuario.css">
+</head>
+
+<body>
+
+    <header>
+        <div class="brand-left">
+            <img src="./assets/img/tecnmBlanco.png" alt="Logo TecNM">
+        </div>
+
+        <div class="brand-center">
+            <img src="./assets/img/itv.png" alt="itv logo">
+        </div>
+
+        <h1>Portal del Estudiante</h1>
+        <p>Consulta los detalles de tu seminario y evaluación</p>
+    </header>
+
+<main class="container">
+
+        <div style="text-align: right; margin-bottom: 15px;">
+            <button
+                type="button"
+                class="btn-logout"
+                onclick="window.location.href='/logout'">
+                Cerrar sesión
+            </button>
+        </div>
+
+        <!-- Le quitamos la fila de Programa a los datos estáticos -->
+        <section class="card" id="info-card-base" style="display: none; margin-bottom: 20px;">
+            <h2 style="color: var(--primary); border-bottom: 2px solid var(--accent); padding-bottom: 10px;">
+                📋 Datos del estudiante
+            </h2>
+            <div class="grid" style="margin-top: 15px;">
+                <div><label>Nombre:</label><p id="lbl-nombre" style="font-weight: bold;">---</p></div>
+                <div><label>No. Control:</label><p id="lbl-control">---</p></div>
+                <div><label>Correo:</label><p id="lbl-correo">---</p></div>
+            </div>
+        </section>
+
+        <!-- Contenedor dinámico donde se meteran los seminarios -->
+        <div id="contenedor-seminarios"></div>
+
+    </main>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", async () => {
+            try {
+                const res = await fetch("/mi-informacion");
+                const data = await res.json();
+
+                if (data.success) {
+                    const d = data.datos;
+
+                    // Llenar datos base
+                    document.getElementById("lbl-nombre").textContent = d.nombre;
+                    document.getElementById("lbl-control").textContent = d.numero_control;
+                    document.getElementById("lbl-correo").textContent = d.correo || 'sin correo';
+                    document.getElementById("info-card-base").style.display = "block";
+
+                    const contenedor = document.getElementById("contenedor-seminarios");
+                    let htmlSeminarios = '';
+
+                    if (!d.seminarios || d.seminarios.length === 0) {
+                        htmlSeminarios = '<p style="text-align:center; color: #6b7280; padding: 20px;">No tienes seminarios registrados aún.</p>';
+                    } else {
+                        const esUnico = d.seminarios.length === 1;
+
+                        d.seminarios.forEach(sem => {
+                            // Construir lista de evaluadores
+                            const evaluadoresLi = sem.evaluadores.map(ev => {
+                                const estado = `${ev.evaluo ? "✅" : "⏳"} ${ev.rol}: ${ev.nombre} — ${ev.evaluo ? "ya calificó" : "pendiente"}`;
+                                const comentario = ev.evaluo && ev.comentarios ? `<p class="texto-scroll" style="margin-top:4px; color:#374151; font-style:italic;">"${ev.comentarios}"</p>` : "";
+                                return `<li style="padding: 8px 0; border-bottom: 1px solid #e5e7eb;"><span style="color:${ev.evaluo ? 'var(--ok, #16a34a)' : 'inherit'}; font-weight:600;">${estado}</span>${comentario}</li>`;
+                            }).join('');
+
+                            const detalleId = `detalles-${sem.id_seminario}`;
+                            const displayDetalle = esUnico ? 'block' : 'none';
+                            const cursorStyle = esUnico ? 'default' : 'pointer';
+                            const iconToggle = esUnico ? '' : '<span style="font-size: 1.2rem; color: var(--primary);">▼</span>';
+                            const colorCalif = String(sem.promedio).includes('Pendiente') ? '#f59e0b' : '#16a34a';
+
+                            htmlSeminarios += `
+                            <section class="card" style="margin-bottom: 20px; border-left: 4px solid var(--accent);">
+                                
+                                <!-- Cabecera de la tarjeta: Título del proyecto en lugar del tipo -->
+                                <div style="display: flex; justify-content: space-between; align-items: center; cursor: ${cursorStyle}; padding-bottom: ${esUnico ? '15px' : '0'}; border-bottom: ${esUnico ? '2px solid var(--accent)' : 'none'};" ${esUnico ? '' : `onclick="toggleSeminario('${detalleId}', this)"`}>
+                                    <div style="flex: 1; padding-right: 15px;">
+                                        <h2 style="color: var(--primary); font-size: 1.25rem; margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${sem.proyecto}</h2>
+                                        <p style="margin: 5px 0 0; color: #6b7280; font-size: 0.9rem;">📅 ${sem.fecha} a las ${sem.hora}</p>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 15px;">
+                                        <span style="background: ${colorCalif}; color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.85rem; font-weight: bold; white-space: nowrap;">
+                                            ${sem.promedio}
+                                        </span>
+                                        ${iconToggle}
+                                    </div>
+                                </div>
+
+                                <!-- Cuerpo desplegable -->
+                                <div id="${detalleId}" style="display: ${displayDetalle}; margin-top: ${esUnico ? '0' : '15px'}; padding-top: ${esUnico ? '0' : '15px'}; border-top: ${esUnico ? 'none' : '1px solid #e5e7eb'};">
+                                    <div class="grid">
+                                        <!-- Primero el tipo de seminario y programa -->
+                                        <div>
+                                            <label>Fase / Tipo de seminario:</label>
+                                            <p style="font-weight: bold; color: var(--primary); font-size: 1.05rem;">${sem.tipo_seminario}</p>
+                                        </div>
+                                        <div>
+                                            <label>Programa:</label>
+                                            <p style="font-weight: bold;">${d.programa}</p>
+                                        </div>
+                                        
+                                        <!-- Despues el título completo repetido -->
+                                        <div style="grid-column: 1 / -1;">
+                                            <label>Título del proyecto:</label>
+                                            <p style="font-weight: bold;">${sem.proyecto}</p>
+                                        </div>
+                                        
+                                        <div>
+                                            <label>Lugar / Enlace:</label>
+                                            <p>${sem.lugar}</p>
+                                        </div>
+                                        <div>
+                                            <label>Modalidad:</label>
+                                            <p>${sem.modalidad}</p>
+                                        </div>
+                                        <div style="grid-column: 1 / -1; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid var(--border);">
+                                            <label style="color: var(--primary-dark);">Comité evaluador:</label>
+                                            <p style="margin-top: 5px; color: var(--text);">${sem.jurado_texto}</p>
+                                        </div>
+                                        <div style="grid-column: 1 / -1; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid var(--border);">
+                                            <label style="color: var(--primary-dark);">Estado de las evaluaciones:</label>
+                                            <ul style="margin-top: 8px; list-style: none; padding: 0;">${evaluadoresLi}</ul>
+                                        </div>
+                                    </div>
+                                    <div style="margin-top: 25px; text-align: center; background: #eff6ff; padding: 20px; border-radius: 12px; border: 2px solid var(--primary);">
+                                        <h3 style="margin: 0; color: var(--primary-dark);">Calificación final</h3>
+                                        <p style="font-size: 2rem; font-weight: bold; margin: 10px 0 0; color: var(--primary);">${sem.promedio}</p>
+                                    </div>
+                                </div>
+                            </section>
+                            `;
+                        });
+                    }
+                    contenedor.innerHTML = htmlSeminarios;
+                } else {
+                    window.location.href = "/";
+                }
+
+            } catch (error) {
+                console.error(error);
+                window.location.href = "/";
+            }
+        });
+
+        // Función para abrir y cerrar las tarjetitas si hay 2 o más seminarios
+        function toggleSeminario(id, headerEl) {
+            const el = document.getElementById(id);
+            const icon = headerEl.querySelector('span:last-child');
+            if (el.style.display === 'none') {
+                el.style.display = 'block';
+                headerEl.style.paddingBottom = '15px';
+                headerEl.style.borderBottom = '2px solid var(--accent)';
+                if(icon) icon.textContent = '▲';
+            } else {
+                el.style.display = 'none';
+                headerEl.style.paddingBottom = '0';
+                headerEl.style.borderBottom = 'none';
+                if(icon) icon.textContent = '▼';
+            }
+        }
+    </script>
+
+</body>
+
+</html>

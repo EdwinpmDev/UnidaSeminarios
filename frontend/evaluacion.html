@@ -4,161 +4,106 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>UNIDA — Sistema de Registro y Evaluación de Seminarios</title>
+  <title>UNIDA — Evaluación de Seminarios</title>
   <link rel="stylesheet" href="./css/evaluacion.css">
 </head>
 
 <body>
 
+  <button id="btnSalirEvaluacion" class="hidden" onclick="window.location.href='/logout'">
+    Cerrar sesión / Salir
+  </button>
+
   <header>
     <h1>UNIDA — SISTEMA DE SEMINARIOS DE POSGRADO</h1>
-    <p>Cédula Multirrol con Autenticación de Seguridad</p>
+    <p>Cédula Oficial de Evaluación del Sínodo</p>
   </header>
 
+  <div id="bannerEnviado" class="hidden">
+    ✅ Evaluación enviada correctamente. Puedes revisar tus respuestas abajo. Cuando termines, pulsa "Cerrar sesión / Salir" arriba para liberar el equipo.
+  </div>
+
   <main>
-    <div class="wizard-card">
+
+    <!-- SEGUNDO CANDADO: código individual de posición (Presidente/Secretario/Vocal) -->
+    <div class="wizard-card" id="gate-posicion">
+      <div class="step-title">Confirma tu posición en el sínodo</div>
+      <p style="color: var(--muted); font-size: 0.9rem; margin-bottom: 15px;">
+        Ingresa el código individual que te entregaron según tu posición (Presidente, Secretario o Vocal).
+        Este código es distinto para cada integrante y solo te dará acceso a evaluar en tu propia posición.
+      </p>
+      <div class="form-group">
+        <label for="codigo_posicion">Código de tu posición</label>
+        <input type="text" id="codigo_posicion" placeholder="Ej. 7F3KZ2QX" autocomplete="off">
+      </div>
+      <p id="errorPosicion" class="hidden" style="color: var(--error); font-size: 0.85rem; margin-bottom: 10px;"></p>
+      <button type="button" id="btnValidarPosicion" class="btn-submit">Confirmar posición</button>
+    </div>
+
+    <div class="wizard-card hidden" id="tarjeta-evaluacion">
       <form id="evalForm" onsubmit="enviarEvaluacionCompleta(event)">
 
         <div class="step-section" id="sec-paso0">
-          <div class="step-title">Paso 0: Identificación del Usuario</div>
+          <div class="step-title">Paso 0: Identificación del Sínodo</div>
           <div class="form-group">
-            <label>Seleccione su rol</label>
-            <div class="radio-container">
-              <div class="radio-btn">
-                <input type="radio" id="rol-alumno" name="evaluador_rol" value="Estudiante - UNIDA" checked
-                  onchange="conmutarModoRol()">
-                <label for="rol-alumno">Estudiante - UNIDA</label>
-              </div>
-              <div class="radio-btn">
-                <input type="radio" id="rol-externo" name="evaluador_rol" value="Externo" onchange="conmutarModoRol()">
-                <label for="rol-externo">Externo (Jurado)</label>
-              </div>
-              <div class="radio-btn">
-                <input type="radio" id="rol-evaluador" name="evaluador_rol" value="Evaluador"
-                  onchange="conmutarModoRol()">
-                <label for="rol-evaluador">Evaluador 🔒</label>
-              </div>
-            </div>
+            <label>Tu posición en el comité</label>
+            <p id="rolAsignadoTexto" style="background: var(--primary); color: white; display: inline-block; padding: 10px 18px; border-radius: 6px; font-weight: 700;">—</p>
+            <input type="hidden" id="evaluador_rol_fijo" value="">
           </div>
 
           <div class="form-group">
-            <label for="evaluador_nombre">Escriba su nombre completo</label>
-            <input type="text" id="evaluador_nombre" placeholder="Ej. Dr. Francisco Acosta" required
-              oninput="evaluarFlujoProgresivo()">
-          </div>
-
-          <div id="bloque-admin-captura" class="admin-box hidden">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-              <h4 style="font-size: 0.95rem; color: var(--primary-dark);">🛠️ Panel de Carga Oficial de Estudiantes
-                (Autorizado)</h4>
-              <span
-                style="background:var(--success); color:white; font-size:0.75rem; font-weight:bold; padding:2px 8px; border-radius:20px;">Sesión
-                Activa</span>
-            </div>
-
-            <div class="form-group">
-              <label>Nombre completo del alumno</label>
-              <input type="text" id="reg_alumno_nombre" placeholder="Ej. Alan García López">
-            </div>
-            <div class="form-group">
-              <label>Título del proyecto de tesis</label>
-              <input type="text" id="reg_alumno_proyecto" placeholder="Ej. Framework de Cómputo Móvil...">
-            </div>
-            <div class="form-group">
-              <label>Programa académico</label>
-              <select id="reg_alumno_programa">
-                <option value="Maestría">Maestría</option>
-                <option value="Doctorado">Doctorado</option>
-              </select>
-            </div>
-            <button type="button" class="btn-secondary" onclick="registrarNuevoEstudianteEnLista()">Registrar
-              estudiante</button>
+            <label for="evaluador_nombre">Nombre del evaluador</label>
+            <input type="text" id="evaluador_nombre" placeholder="Ej. Dr. Francisco Acosta" required oninput="evaluarFlujoProgresivo()">
           </div>
         </div>
 
         <div class="step-section disabled" id="sec-paso1">
-          <div class="step-title">Paso 1: Datos básicos (Evaluado)</div>
+          <div class="step-title">Paso 1: Datos del Evaluado</div>
           <div class="form-group">
-            <label for="select-evaluado">Seleccione el estudiante o proyecto a evaluar</label>
-            <select id="select-evaluado" required onchange="cargarDatosAlumnoAutomático()">
-              <option value="" selected disabled>-- Elija un alumno de la lista oficial --</option>
-              <option value="alumno1" data-proyecto="Framework de Cómputo Móvil para el Monitoreo de Signos Vitales"
-                data-programa="Maestría">Alan García López — Proyecto: Framework de Cómputo Móvil</option>
-              <option value="alumno2" data-proyecto="Optimización Heurística de Algoritmos Criptográficos en Redes IoT"
-                data-programa="Doctorado">Elena Martínez Ruiz — Proyecto: Optimización Heurística</option>
+            <label for="select-evaluado">Estudiante</label>
+            <select id="select-evaluado" disabled>
+              <option value="">Cargando datos seguros...</option>
             </select>
           </div>
           <div class="form-group">
-            <label>Título del proyecto seleccionado</label>
-            <input type="text" id="proyecto_titulo" placeholder="Se autocompleta automáticamente..." disabled>
+            <label>Título del proyecto</label>
+            <input type="text" id="proyecto_titulo" disabled>
           </div>
           <div class="form-group">
-            <label>Programa detectado</label>
-            <input type="text" id="proyecto_programa" placeholder="Se autocompleta..." disabled>
+            <label>Programa académico</label>
+            <input type="text" id="proyecto_programa" disabled>
           </div>
         </div>
 
         <div class="step-section disabled" id="sec-paso2">
-          <div class="step-title">Paso 2: Tipo de Seminario</div>
+          <div class="step-title">Paso 2: Seminario Asignado</div>
           <div class="form-group">
-            <label>Avance correspondiente</label>
+            <label>Fase de avance</label>
             <div class="radio-container" id="contenedor-seminarios-dinamicos">
             </div>
           </div>
         </div>
 
         <div class="step-section disabled" id="sec-paso3">
-          <div class="step-title">Paso 3: Criterios de evaluación oficiales ("Quest")</div>
+          <div class="step-title">Paso 3: Criterios de evaluación oficiales</div>
 
-          <h4 style="font-size:0.9rem; color:var(--primary); margin-bottom:15px;">I. Exposición Oral (P1 a P8 — Escala
-            del 1 al 10)</h4>
+          <h4 style="font-size:0.9rem; color:var(--primary); margin-bottom:15px;">I. Exposición Oral (P1 a P8 — Escala del 1 al 10)</h4>
           <div id="quest-container-10"></div>
 
-          <h4 style="font-size:0.9rem; color:var(--primary); margin: 25px 0 15px;">II. Reporte escrito y debate (P9 a
-            P12 — Escala del 1 al 5)</h4>
+          <h4 style="font-size:0.9rem; color:var(--primary); margin: 25px 0 15px;">II. Reporte escrito y debate (P9 a P12 — Escala del 1 al 5)</h4>
           <div id="quest-container-5"></div>
 
           <div class="form-group" style="margin-top: 25px;">
-            <label style="color: var(--primary-dark);" for="txt-comentarios">Observaciones y retroalimentación (Mínimo
-              50 caracteres) *</label>
-            <textarea id="txt-comentarios" rows="4"
-              placeholder="Ingrese detalladamente los comentarios y correcciones del sínodo..." required
-              oninput="validarComentarios()"></textarea>
+            <label style="color: var(--primary-dark);" for="txt-comentarios">Observaciones y retroalimentación (Mínimo 50 caracteres) *</label>
+            <textarea id="txt-comentarios" rows="4" placeholder="Ingrese detalladamente los comentarios y correcciones del sínodo..." required oninput="validarComentarios()"></textarea>
             <div id="comentarios-info" class="char-counter">0 / 50 caracteres</div>
           </div>
         </div>
 
-        <button type="submit" id="btn-enviar-todo" class="btn-submit" disabled>Enviar evaluación completa</button>
+        <button type="submit" id="btn-enviar-todo" class="btn-submit" disabled>Enviar evaluación final</button>
       </form>
     </div>
   </main>
-
-  <div id="modal-login" class="modal-overlay hidden">
-    <div class="modal-content">
-      <h3>🔒 Autenticación de evaluador</h3>
-      <p style="font-size: 0.85rem; color: var(--muted); margin-bottom: 15px;">Este módulo requiere credenciales
-        administrativas de acceso.</p>
-
-      <div class="form-group">
-        <label for="mod_usuario">Usuario</label>
-        <input type="text" id="mod_usuario" placeholder="Ingrese su identificador">
-      </div>
-      <div class="form-group">
-        <label for="mod_password">Contraseña</label>
-        <input type="password" id="mod_password" placeholder="••••••••">
-      </div>
-
-      <p id="error-login" style="color: var(--error); font-size: 0.85rem; margin-bottom: 10px;" class="hidden">⚠️
-        Credenciales incorrectas. Intente de nuevo.</p>
-
-      <div style="display: flex; gap: 10px; justify-content: flex-end;">
-        <button type="button" class="btn-secondary" style="background:#9ca3af;"
-          onclick="cancelarLoginEvaluador()">Cancelar</button>
-        <button type="button" class="btn-submit" style="width: auto; padding: 10px 20px;"
-          onclick="procesarLoginEvaluador()">Ingresar</button>
-      </div>
-    </div>
-  </div>
 
   <footer>
     &copy; 2026 Instituto Tecnológico de Veracruz &middot; UNIDA &middot; Todos los derechos reservados.

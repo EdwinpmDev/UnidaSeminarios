@@ -16,6 +16,33 @@
     box-sizing: border-box
 }
 
+/* Evita que texto largo (comentarios, proyectos, enlaces) se salga de sus
+   contenedores: se ajusta (wrap) tanto en palabras normales como en
+   cadenas largas sin espacios (ej. enlaces de Meet/Zoom). */
+p, td, th, li, span, div, label {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+/* Caja de texto con altura cómoda: si el contenido es corto se ve completo
+   sin barra; si es muy largo, aparece una barrita de desplazamiento vertical
+   en vez de estirar la tarjeta o desbordarse. */
+.texto-scroll {
+    max-height: 170px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    padding-right: 6px;
+}
+
+.texto-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+
+.texto-scroll::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 4px;
+}
+
 body {
     margin: 0;
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans", "Helvetica Neue", sans-serif;
@@ -162,6 +189,8 @@ label {
 }
 
 input[type="text"],
+input[type="email"],
+input[type="password"],
 input[type="date"],
 input[type="time"],
 select {
@@ -176,9 +205,30 @@ select {
 }
 
 input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
 select:focus {
     border-color: var(--primary);
     box-shadow: 0 0 0 3px rgba(27, 57, 106, .12);
+}
+
+/* Estilos para el botón de cerrar sesión */
+.btn-logout {
+    background: transparent;
+    color: var(--error);
+    border: 2px solid var(--error);
+    padding: 8px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-logout:hover {
+    background: var(--error);
+    color: #fff;
+    transform: translateY(-1px);
 }
 
 .hidden {
@@ -267,7 +317,7 @@ button[disabled] {
     margin: 0 0 8px 0;
 }
 
-/* ===== Overlay de Login (bloquea la UI hasta autenticación) ===== */
+/* ---- Overlay de Login (bloquea la UI hasta autenticación) --- */
 #loginOverlay {
     position: fixed;
     inset: 0;
@@ -310,3 +360,25 @@ button[disabled] {
     font-size: .9rem;
     margin-top: 8px;
     }
+
+/* Contenedor desplazable para la tabla de estudiantes*/
+.table-scroll-container {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-top: 15px;
+}
+
+.table-scroll-container th {
+    position: sticky;
+    top: 0;
+    background: #f8fafc;
+    padding: 12px;
+    z-index: 1;
+    box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
+}
+
+.table-scroll-container td {
+    padding: 10px 12px;
+}

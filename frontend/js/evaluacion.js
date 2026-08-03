@@ -1,3 +1,5 @@
+const API_BASE = window.location.origin;
+
 const bancoPreguntas = {
     1: "Planteamiento del problema, justificación y definición clara de objetivos.",
     2: "Dominio, rigor científico y profundidad conceptual del tema expuesto.",
@@ -13,164 +15,157 @@ const bancoPreguntas = {
     12: "Capacidad de respuesta y debate crítico ante las preguntas del sínodo."
 };
 
-let esEvaluadorAutenticado = false;
-let contadorAlumnos = 3;
+let seminarioData = null;
 
-// Conmutador de roles dinámico
-function conmutarModoRol() {
-    const rolSeleccionado = document.querySelector('input[name="evaluador_rol"]:checked').value;
-    const bloqueAdmin = document.getElementById('bloque-admin-captura');
+const gatePosicion = document.getElementById('gate-posicion');
+const tarjetaEvaluacion = document.getElementById('tarjeta-evaluacion');
+const codigoPosicionInput = document.getElementById('codigo_posicion');
+const errorPosicion = document.getElementById('errorPosicion');
+const btnValidarPosicion = document.getElementById('btnValidarPosicion');
 
-    if (rolSeleccionado === "Evaluador") {
-        if (!esEvaluadorAutenticado) {
-            // Abrir modal de seguridad si no está logueado
-            document.getElementById('modal-login').classList.remove('hidden');
-            document.getElementById('mod_usuario').focus();
+document.addEventListener("DOMContentLoaded", async () => {
+    construirQuest('quest-container-10', 1, 8, 10);
+    construirQuest('quest-container-5', 9, 12, 5);
+
+    try {
+        const res = await fetch(`${API_BASE}/datos-evaluacion`);
+        const data = await res.json();
+        
+        if (data.success) {
+            seminarioData = data.datos;
+            if (seminarioData.rol_evaluador) {
+                mostrarFormularioConRol(seminarioData.rol_evaluador, seminarioData.nombre_evaluador);
+            }
         } else {
-            bloqueAdmin.classList.remove('hidden');
+            alert("Sesión inválida o expirada. Asegúrate de ingresar tu clave correctamente.");
+            window.location.href = '/';
         }
-    } else {
-        bloqueAdmin.classList.add('hidden');
+    } catch (error) {
+        alert("Error de conexión con el servidor.");
+        window.location.href = '/';
     }
-    evaluarFlujoProgresivo();
-}
+});
 
-// Validación simulada de Credenciales de Evaluador
-function procesarLoginEvaluador() {
-    const user = document.getElementById('mod_usuario').value.trim();
-    const pass = document.getElementById('mod_password').value.trim();
-    const errorMsg = document.getElementById('error-login');
+if (btnValidarPosicion) {
+    btnValidarPosicion.addEventListener('click', async () => {
+        const codigo = codigoPosicionInput.value.trim();
+        errorPosicion.classList.add('hidden');
 
-    // Credenciales fijas de ejemplo (reemplazables por tu API/BD backend)
-    if (user === "admin" && pass === "unida2026") {
-        esEvaluadorAutenticado = true;
-        errorMsg.classList.add('hidden');
-        document.getElementById('modal-login').classList.add('hidden');
-        document.getElementById('bloque-admin-captura').classList.remove('hidden');
+        if (!codigo) {
+            errorPosicion.textContent = 'Ingresa tu código de posición.';
+            errorPosicion.classList.remove('hidden');
+            return;
+        }
 
-        // Limpiar formulario modal
-        document.getElementById('mod_usuario').value = '';
-        document.getElementById('mod_password').value = '';
-        evaluarFlujoProgresivo();
-    } else {
-        errorMsg.classList.remove('hidden');
-    }
-}
+        btnValidarPosicion.disabled = true;
+        btnValidarPosicion.textContent = 'Verificando...';
 
-function cancelarLoginEvaluador() {
-    // Regresar la selección al rol "Estudiante" por seguridad
-    document.getElementById('rol-alumno').checked = true;
-    document.getElementById('modal-login').classList.add('hidden');
-    document.getElementById('error-login').classList.add('hidden');
-    conmutarModoRol();
-}
+        try {
+            const res = await fetch(`${API_BASE}/validar-posicion`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ codigo_posicion: codigo })
+            });
+            const data = await res.json();
 
-// Registro en caliente de estudiantes para la lista del paso 1
-function registrarNuevoEstudianteEnLista() {
-    const nombre = document.getElementById('reg_alumno_nombre').value.trim();
-    const proyecto = document.getElementById('reg_alumno_proyecto').value.trim();
-    const programa = document.getElementById('reg_alumno_programa').value;
-    const selectEvaluado = document.getElementById('select-evaluado');
-
-    if (!nombre || !proyecto) {
-        alert("Por favor, capture el nombre del alumno y el título del proyecto completo.");
-        return;
-    }
-
-    const nuevaOpcion = document.createElement('option');
-    nuevaOpcion.value = `alumno_dinamico_${contadorAlumnos++}`;
-    nuevaOpcion.setAttribute('data-proyecto', proyecto);
-    nuevaOpcion.setAttribute('data-programa', programa);
-    nuevaOpcion.textContent = `${nombre} — Proyecto: ${proyecto.substring(0, 45)}...`;
-
-    selectEvaluado.appendChild(nuevaOpcion);
-
-    // Limpiar campos de captura
-    document.getElementById('reg_alumno_nombre').value = '';
-    document.getElementById('reg_alumno_proyecto').value = '';
-
-    alert(`¡Estudiante "${nombre}" registrado con éxito en la lista desplegable!`);
-    evaluarFlujoProgresivo();
-}
-
-// Desbloqueo incremental
-function evaluarFlujoProgresivo() {
-    const nombreEvaluador = document.getElementById('evaluador_nombre').value.trim();
-    document.getElementById('sec-paso1').classList.toggle('disabled', nombreEvaluador.length < 4);
-}
-
-// Autocompletado del estudiante seleccionado
-function cargarDatosAlumnoAutomático() {
-    const select = document.getElementById('select-evaluado');
-    const opcionSeleccionada = select.options[select.selectedIndex];
-
-    const campoProyecto = document.getElementById('proyecto_titulo');
-    const campoPrograma = document.getElementById('proyecto_programa');
-
-    const proyecto = opcionSeleccionada.getAttribute('data-proyecto');
-    const programa = opcionSeleccionada.getAttribute('data-programa');
-
-    campoProyecto.value = proyecto;
-    campoPrograma.value = programa;
-
-    renderSeminariosDinamicos(programa);
-    document.getElementById('sec-paso2').classList.remove('disabled');
-}
-
-// Render condicional del seminario
-function renderSeminariosDinamicos(programa) {
-    const contenedor = document.getElementById('contenedor-seminarios-dinamicos');
-    contenedor.innerHTML = '';
-
-    let opciones = programa === "Maestría"
-        ? [{ id: "sem-proto", label: "Protocolo" }, { id: "sem-culmi", label: "Culminación" }]
-        : [{ id: "sem-proto", label: "Protocolo" }, { id: "sem-av1", label: "Primer avance" }, { id: "sem-av2", label: "Segundo avance" }, { id: "sem-culmi", label: "Culminación" }];
-
-    opciones.forEach(opt => {
-        contenedor.innerHTML += `
-            <div class="radio-btn">
-            <input type="radio" id="${opt.id}" name="tipo_seminario" value="${opt.label}" required onchange="desbloquearPaso3()">
-            <label for="${opt.id}">${opt.label}</label>
-            </div>`;
+            if (data.success) {
+                mostrarFormularioConRol(data.rol_evaluador, data.nombre_evaluador);
+            } else {
+                errorPosicion.textContent = data.mensaje || 'Código incorrecto.';
+                errorPosicion.classList.remove('hidden');
+            }
+        } catch (error) {
+            errorPosicion.textContent = 'Error de conexión con el servidor.';
+            errorPosicion.classList.remove('hidden');
+        } finally {
+            btnValidarPosicion.disabled = false;
+            btnValidarPosicion.textContent = 'Confirmar posición';
+        }
     });
 }
 
-function desbloquearPaso3() {
-    document.getElementById('sec-paso3').classList.remove('disabled');
-    validarComentarios();
+
+function mostrarFormularioConRol(rol, nombre) {
+    gatePosicion.classList.add('hidden');
+    tarjetaEvaluacion.classList.remove('hidden');
+    document.getElementById('rolAsignadoTexto').textContent = rol;
+    document.getElementById('evaluador_rol_fijo').value = rol;
+
+    const inputNombre = document.getElementById('evaluador_nombre');
+    inputNombre.value = nombre || '';
+    inputNombre.readOnly = true;
+    inputNombre.style.backgroundColor = '#e2e8f0';
+    inputNombre.style.color = '#475569';
+    inputNombre.style.cursor = 'not-allowed';
+
+    if (seminarioData) {
+        prellenarDatos();
+    }
+    
+    evaluarFlujoProgresivo();
 }
 
-// Inyección de preguntas
+function prellenarDatos() {
+    // Rellenamos el paso 1
+    const select = document.getElementById('select-evaluado');
+    select.innerHTML = `<option value="${seminarioData.id_seminario}" selected>${seminarioData.nombre_estudiante} — Proyecto: ${seminarioData.proyecto.substring(0, 40)}...</option>`;
+    
+    document.getElementById('proyecto_titulo').value = seminarioData.proyecto;
+    document.getElementById('proyecto_programa').value = seminarioData.programa;
+
+    // Rellenamos el paso 2
+    const contenedor = document.getElementById('contenedor-seminarios-dinamicos');
+    contenedor.innerHTML = `
+        <div class="radio-btn">
+            <input type="radio" id="sem-asignado" name="tipo_seminario" value="${seminarioData.tipo_seminario}" checked>
+            <label for="sem-asignado">${seminarioData.tipo_seminario}</label>
+        </div>
+    `;
+
+    // Desbloqueamos todos los pasos visualmente
+    document.getElementById('sec-paso1').classList.remove('disabled');
+    document.getElementById('sec-paso2').classList.remove('disabled');
+    document.getElementById('sec-paso3').classList.remove('disabled');
+}
+
+function evaluarFlujoProgresivo() {
+    const nombreEvaluador = document.getElementById('evaluador_nombre').value.trim();
+    if (nombreEvaluador.length >= 4) {
+        validarComentarios(); 
+    } else {
+        document.getElementById('btn-enviar-todo').disabled = true;
+    }
+}
+
 function construirQuest(containerId, min, max, maxEscala) {
     const container = document.getElementById(containerId);
+    container.innerHTML = ''; 
     for (let i = min; i <= max; i++) {
         let optionsHtml = '';
         for (let j = 1; j <= maxEscala; j++) {
             optionsHtml += `
             <div class="scale-box">
-            <input type="radio" id="P${i}-${j}" name="P${i}" value="${j}" required onchange="validarComentarios()">
-            <label for="P${i}-${j}">${j}</label>
-        </div>`;
+                <input type="radio" id="P${i}-${j}" name="P${i}" value="${j}" required onchange="validarComentarios()">
+                <label for="P${i}-${j}">${j}</label>
+            </div>`;
         }
         container.innerHTML += `
             <div class="quest-card">
-            <div class="quest-header">P${i}. ${bancoPreguntas[i]}</div>
-            <div class="scale-row">${optionsHtml}</div>
+                <div class="quest-header">P${i}. ${bancoPreguntas[i]}</div>
+                <div class="scale-row">${optionsHtml}</div>
             </div>`;
     }
 }
-construirQuest('quest-container-10', 1, 8, 10);
-construirQuest('quest-container-5', 9, 12, 5);
 
-// Validación de comentarios obligatorios
 function validarComentarios() {
     const texto = document.getElementById('txt-comentarios').value.trim();
     const info = document.getElementById('comentarios-info');
     const formValido = document.getElementById('evalForm').checkValidity();
+    const nombreEvaluador = document.getElementById('evaluador_nombre').value.trim();
 
     info.textContent = `${texto.length} / 50 caracteres`;
 
-    if (texto.length >= 50 && formValido) {
+    if (texto.length >= 50 && formValido && nombreEvaluador.length >= 4) {
         info.className = "char-counter valid";
         document.getElementById('btn-enviar-todo').disabled = false;
     } else {
@@ -179,7 +174,50 @@ function validarComentarios() {
     }
 }
 
-function enviarEvaluacionCompleta(event) {
+async function enviarEvaluacionCompleta(event) {
     event.preventDefault();
-    alert("¡Evaluación de Seminario registrada de manera exitosa!");
+    
+    const btnSubmit = document.getElementById('btn-enviar-todo');
+    btnSubmit.disabled = true;
+    btnSubmit.textContent = "Guardando Evaluación...";
+
+    const payload = {
+        evaluador_nombre: document.getElementById('evaluador_nombre').value.trim(),
+        evaluador_rol: document.getElementById('evaluador_rol_fijo').value,
+        comentarios: document.getElementById('txt-comentarios').value.trim()
+    };
+
+    for (let i = 1; i <= 12; i++) {
+        payload[`P${i}`] = document.querySelector(`input[name="P${i}"]:checked`).value;
+    }
+
+    try {
+        const req = await fetch(`${API_BASE}/guardar-evaluacion`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        const res = await req.json();
+
+        if (res.success) {
+            document.getElementById('bannerEnviado').textContent =
+                `✅ Evaluación enviada correctamente (Calificación: ${res.calificacion}/100). Puedes revisar tus respuestas abajo. Cuando termines, pulsa "Cerrar sesión / Salir" arriba para liberar el equipo.`;
+            document.getElementById('bannerEnviado').classList.remove('hidden');
+            document.getElementById('btnSalirEvaluacion').classList.remove('hidden');
+            tarjetaEvaluacion.classList.add('evaluacion-bloqueada');
+            document.querySelectorAll('#evalForm input, #evalForm textarea, #evalForm select, #evalForm button')
+                .forEach(el => { el.disabled = true; });
+            btnSubmit.textContent = "Evaluación enviada";
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+            alert("❌ Error: " + res.mensaje);
+            btnSubmit.disabled = false;
+            btnSubmit.textContent = "Enviar evaluación final";
+        }
+    } catch (error) {
+        console.error(error);
+        alert("No fue posible conectar con el servidor.");
+        btnSubmit.disabled = false;
+        btnSubmit.textContent = "Enviar evaluación final";
+    }
 }
