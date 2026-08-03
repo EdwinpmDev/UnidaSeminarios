@@ -16,17 +16,14 @@
     box-sizing: border-box
 }
 
-/* Evita que texto largo (comentarios, proyectos, enlaces) se salga de sus
-   contenedores: se ajusta (wrap) tanto en palabras normales como en
-   cadenas largas sin espacios (ej. enlaces de Meet/Zoom). */
+/* Evita que texto largo (comentarios, proyectos, enlaces) se salga de sus contenedores */
+   
 p, td, th, li, span, div, label {
     overflow-wrap: anywhere;
     word-break: break-word;
 }
 
-/* Caja de texto con altura cómoda: si el contenido es corto se ve completo
-   sin barra; si es muy largo, aparece una barrita de desplazamiento vertical
-   en vez de estirar la tarjeta o desbordarse. */
+/* Caja de texto con desplazamiento dependiendo de la cantidad de texto */ 
 .texto-scroll {
     max-height: 170px;
     overflow-y: auto;
@@ -51,13 +48,12 @@ body {
     line-height: 1.4;
 }
 
-/* ===== Encabezado con logos (página) ===== */
+/* ----- Encabezado con logos (página) --- */
 header {
     position: relative;
     background: linear-gradient(135deg, var(--primary), var(--primary-dark));
     color: #fff;
     padding: 92px 16px 28px;
-    /* espacio para los logos */
     text-align: center;
 }
 
@@ -381,4 +377,9 @@ button[disabled] {
 
 .table-scroll-container td {
     padding: 10px 12px;
+}
+
+tbody tr:hover {
+    background-color: #f1f5f9;
+    transition: background-color 0.2s ease;
 }

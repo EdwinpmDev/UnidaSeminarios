@@ -773,6 +773,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // GENERAR AÑOS DINÁMICAMENTE PARA EL FILTRO DE AGENDA
     const selectAnioAgenda = document.getElementById('filtroAnioAgenda');
+    const selectMesAgenda = document.getElementById('filtroMesAgenda');
     if (selectAnioAgenda) {
         const anioActual = hoy.getFullYear();
         for (let i = 0; i <= 4; i++) { // Genera el año actual + 4 años a futuro
@@ -782,6 +783,10 @@ document.addEventListener("DOMContentLoaded", async () => {
             opcion.textContent = anio;
             selectAnioAgenda.appendChild(opcion);
         }
+    //Seleccionar mes y año actual automáticamente al cargar
+    const mesActual = String(hoy.getMonth() + 1).padStart(2, '0');
+    if (selectMesAgenda) selectMesAgenda.value = mesActual;
+    selectAnioAgenda.value = anioActual;
     }
 
     try {
@@ -1343,9 +1348,9 @@ function renderizarAgenda() {
             
             return cumpleMes && cumpleAnio;
         }).sort((a, b) => {
-            const dateA = new Date(`${a.fecha}T${a.hora || '00:00'}`);
-            const dateB = new Date(`${b.fecha}T${b.hora || '00:00'}`);
-            return dateA - dateB;
+            const fechaHoraA = a.fecha + "T" + (a.hora || "00:00");
+            const fechaHoraB = b.fecha + "T" + (b.hora || "00:00");
+            return fechaHoraA.localeCompare(fechaHoraB);
         });
 
         if (eventos.length === 0) {
@@ -1405,7 +1410,13 @@ function renderizarAgenda() {
             <hr style="border: 0; border-top: 1px dashed #cbd5e1; margin: 15px 0;">
             <p style="margin-bottom: 8px;"><strong>📅 Fecha y Hora:</strong> ${ev.fecha} a las ${ev.hora}</p>
             <p style="margin-bottom: 8px;"><strong>📍 Lugar:</strong> ${ev.lugar} (${ev.modalidad})</p>
-            <p style="margin-bottom: 15px;"><strong>🔑 Clave de Acceso al Jurado:</strong> <span style="font-family: monospace; font-size: 1.2rem; color: var(--primary); font-weight: bold; background: #e0e7ff; padding: 2px 8px; border-radius: 4px;">${ev.clave_acceso}</span></p>
+
+        <div style="background: #f8fafc; border: 1px solid var(--border); padding: 12px; border-radius: 8px; margin-bottom: 15px;">
+            <p style="margin-bottom: 10px; color: var(--primary-dark);"><strong>🔑 Clave General:</strong> <span style="font-family: monospace; font-size: 1.1rem; color: var(--primary); font-weight: bold; background: #e0e7ff; padding: 2px 6px; border-radius: 4px;">${ev.clave_acceso}</span></p>
+            <p style="margin-bottom: 4px; font-size: 0.9rem;"><strong>Presidente (${ev.presidente || 'Por asignar'}):</strong> <span style="font-family: monospace; font-weight: bold;">${ev.clave_presidente || 'N/A'}</span></p>
+            <p style="margin-bottom: 4px; font-size: 0.9rem;"><strong>Secretario (${ev.secretario || 'Por asignar'}):</strong> <span style="font-family: monospace; font-weight: bold;">${ev.clave_secretario || 'N/A'}</span></p>
+            <p style="margin-bottom: 0; font-size: 0.9rem;"><strong>Vocal (${ev.vocal || 'Por asignar'}):</strong> <span style="font-family: monospace; font-weight: bold;">${ev.clave_vocal || 'N/A'}</span></p>
+        </div>
             
             <div style="text-align: right;">
                 <button onclick="document.getElementById('modalDetallesAgenda').classList.add('hidden'); abrirEdicionAlumno(${ev.id_seminario});" style="padding: 10px 15px; font-size: 0.95rem; border-radius: 6px; border: none; cursor: pointer; background: #d97706; color: white; font-weight: bold;">✏️ Editar Seminario</button>

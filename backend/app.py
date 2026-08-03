@@ -19,7 +19,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
 from sqlalchemy import create_engine, Column, Integer, String, Float, Text, ForeignKey, DateTime, Date, Time, Boolean
-from sqlalchemy.orm import declarative_base, sessionmaker, scoped_session, relationship
+from sqlalchemy.orm import declarative_base, sessionmaker, scoped_session, relationship, selectinload
 from sqlalchemy.exc import IntegrityError
 from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
@@ -603,21 +603,30 @@ def obtener_estudiantes():
     session = Session()
     try:
         lista = []
-        for est in session.query(Estudiante).all():
+        estudiantes = session.query(Estudiante).options(
+            selectinload(Estudiante.seminarios).selectinload(Seminario.evaluaciones)
+        ).all()
+        for est in estudiantes:
             sems_list = []
             activos = 0
             for s in est.seminarios:
-                evals = session.query(Evaluacion).filter_by(seminario_id=s.id).all()
+                evals = s.evaluaciones
                 es_evaluado = len(evals) >= 3
                 if not es_evaluado:
                     activos += 1
                     promedio_str = f"Pendiente ({len(evals)}/3)"
                 else:
                     promedio_str = f"{round(sum(e.calificacion_final for e in evals) / len(evals), 1)} / 100"
+
+                jurado = parsear_jurado(s.jurado_texto)
                 
                 sems_list.append({
                     "id_seminario": s.id, "proyecto": s.proyecto, "tipo_seminario": s.tipo_seminario,
                     "clave_acceso": s.clave_acceso, "calificacion": promedio_str, "es_evaluado": es_evaluado,
+                    "clave_presidente": s.clave_presidente, "presidente": jurado.get("Presidente", ""),
+                    "clave_secretario": s.clave_secretario, "secretario": jurado.get("Secretario", ""),
+                    "clave_vocal": s.clave_vocal, "vocal": jurado.get("Vocal", ""),
+                    "calificacion": promedio_str, "es_evaluado": es_evaluado,
                     "fecha": str(s.fecha) if s.fecha else "", "hora": s.hora.strftime("%H:%M") if s.hora else "",
                     "lugar": s.lugar or "", "modalidad": s.modalidad or ""
                 })
@@ -973,14 +982,16 @@ def descargar_reporte():
         
         ws.append(['No. Control', 'Nombre de alumno', 'Seminarios activos', 'Seminarios evaluados', 'Proyectos Registrados'])
         
-        for est in session.query(Estudiante).all():
+        estudiantes = session.query(Estudiante).options(
+            selectinload(Estudiante.seminarios).selectinload(Seminario.evaluaciones)
+        ).all()
+        for est in estudiantes:
             activos = 0
             evaluados = 0
             nombres_proyectos = []
-            
             for s in est.seminarios:
                 nombres_proyectos.append(s.proyecto)
-                evals = session.query(Evaluacion).filter_by(seminario_id=s.id).all()
+                evals = s.evaluaciones
                 if len(evals) >= 3:
                     evaluados += 1
                 else:
@@ -1015,8 +1026,10 @@ def descargar_agenda():
         ws = wb.active
         ws.title = "Agenda filtrada"
         ws.append(['Fecha', 'Hora', 'Lugar', 'Modalidad', 'Estudiante', 'No. Control', 'Tipo de seminario', 'Proyecto'])
+
+        seminarios = session.query(Seminario).order_by(Seminario.fecha.asc(), Seminario.hora.asc()).all()
         
-        for s in session.query(Seminario).all():
+        for s in seminarios:
             if not s.fecha: continue
             
             s_mes = f"{s.fecha.month:02d}"
