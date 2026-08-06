@@ -72,12 +72,12 @@
                 </div>
                 <div class="grid">
                   <div>
-                    <label for="numero_control">Número de control</label>
-                    <input type="text" id="numero_control" placeholder="Ej. 12345678" pattern="[0-9]{8,}" inputmode="numeric" title="Solo números, sin letras ni espacios" required />
+                    <label for="usuarioAlumno">Nombre de usuario</label>
+                    <input type="text" id="usuarioAlumno" placeholder="Ej. A123" pattern="[A-Za-z0-9]{4,}" title="Mínimo 4 caracteres, letras y/o números sin espacios" required />
                   </div>
                     <div>
                     <label for="password_estudiante" id="lbl_pass_est">Contraseña (AñoMesDía)</label>
-                    <input type="text" id="password_estudiante" placeholder="Ej. 010101" pattern="[0-9]{6,}" inputmode="numeric" title="Debe contener entre 6 y 8 números" required />
+                    <input type="text" id="password_estudiante" placeholder="Ej. Pass123" pattern="[A-Za-z0-9]{4,}" title="Mínimo 4 caracteres alfanuméricos" required />
                   </div>
                   <div>
                     <label for="nombre">Nombre completo</label>
@@ -242,7 +242,7 @@
                     <thead>
                         <tr style="border-bottom: 2px solid #ccc;">
                             <th>Nombre</th>
-                            <th>No. Control</th>
+                            <th>Nombre de usuario</th>
                             <th>Seminarios Activos</th>
                             <th>Acciones</th>
                         </tr>
@@ -298,8 +298,8 @@
             <input type="hidden" id="editSoloEstudianteId" />
             <div class="grid">
                 <div style="grid-column: 1 / -1;">
-                    <label for="edit_solo_numero_control">Número de control</label>
-                    <input type="text" id="edit_solo_numero_control" pattern="[0-9]+" inputmode="numeric" minlength="8" title="Mínimo 8 números, sin letras ni espacios" required />
+                    <label for="edit_solo_usuarioAlumno">Número de control</label>
+                    <input type="text" id="edit_solo_usuarioAlumno" pattern="[A-Za-z0-9]{4,}" title="Mínimo 4 letras/numeros, sin espacios" required />
                 </div>
                 <div style="grid-column: 1 / -1;">
                     <label for="edit_solo_nombre">Nombre completo</label>
@@ -318,7 +318,7 @@
                 </div>
                 <div style="grid-column: 1 / -1;">
                     <label for="edit_solo_password">Nueva contraseña (opcional)</label>
-                    <input type="text" id="edit_solo_password" pattern="[0-9]{6,}" inputmode="numeric" title="Mínimo 6 números, sin letras" placeholder="Dejar en blanco para no cambiarla" />
+                    <input type="text" id="edit_solo_password" pattern="[A-Za-z0-9]{4,}" title="Mínimo 4 caracteres alfanuméricos" placeholder="Dejar en blanco para no cambiarla" />
                 </div>
             </div>
             <div class="row-actions" style="margin-top: 15px;">

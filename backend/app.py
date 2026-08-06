@@ -18,7 +18,7 @@ from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
-from sqlalchemy import create_engine, Column, Integer, String, Float, Text, ForeignKey, DateTime, Date, Time, Boolean
+from sqlalchemy import create_engine, Column, Integer, String, Float, Text, ForeignKey, DateTime, Date, Time, Boolean, extract
 from sqlalchemy.orm import declarative_base, sessionmaker, scoped_session, relationship, selectinload
 from sqlalchemy.exc import IntegrityError
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -112,7 +112,7 @@ class UsuarioEvaluador(Base):
 class Estudiante(Base):
     __tablename__ = "estudiantes"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    numero_control = Column(String(15), unique=True, nullable=False, index=True)
+    usuarioAlumno = Column(String(15), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=False) 
     nombre = Column(String(100), nullable=False)
     correo = Column(String(150), nullable=False)
@@ -163,8 +163,8 @@ Base.metadata.create_all(engine)
 
 NOMBRE_REGEX = re.compile(r'^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\s]+$')
 CORREO_REGEX = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]{2,}$')
-NUMERO_CONTROL_REGEX = re.compile(r'^[0-9]{8,}$')
-PASSWORD_ESTUDIANTE_REGEX = re.compile(r'^[0-9]{6,}$')
+NUMERO_CONTROL_REGEX = re.compile(r'^[A-Za-z0-9]{4,}$')
+PASSWORD_ESTUDIANTE_REGEX = re.compile(r'^[A-Za-z0-9]{4,}$')
 
 def generar_clave_acceso():
     caracteres = string.ascii_uppercase + string.digits
@@ -374,11 +374,11 @@ def login_estudiante():
     session = Session()
     try:
         data = request.get_json()
-        numero_control, password = data.get("usuario", "").strip(), data.get("password", "").strip()
+        usuarioAlumno, password = data.get("usuario", "").strip(), data.get("password", "").strip()
 
-        estudiante = session.query(Estudiante).filter_by(numero_control=numero_control).first()
+        estudiante = session.query(Estudiante).filter_by(usuarioAlumno=usuarioAlumno).first()
         if not estudiante or not check_password_hash(estudiante.password_hash, password):
-            app.logger.warning(f"intento de login estudiante fallido para control: {numero_control} desde {get_remote_address()}")
+            app.logger.warning(f"intento de login estudiante fallido para control: {usuarioAlumno} desde {get_remote_address()}")
             return jsonify({"success": False, "mensaje": "Número de control o contraseña incorrectos"}), 401
 
         token_jwt = jwt.encode({"id_estudiante": estudiante.id, "rol": "estudiante", "exp": datetime.now(timezone.utc) + timedelta(hours=8)}, JWT_SECRET, algorithm="HS256")
@@ -400,7 +400,7 @@ def registrar_estudiante():
     session = Session()
     try:
         data = request.get_json() or {}
-        numero_control, nombre = data.get("numero_control", "").strip(), data.get("nombre", "").strip()
+        usuarioAlumno, nombre = data.get("usuarioAlumno", "").strip(), data.get("nombre", "").strip()
         password, correo = data.get("password_estudiante", "").strip(), data.get("correo", "").strip()
         presidente = data.get("presidente", "").strip()
         secretario = data.get("secretario", "").strip()
@@ -408,11 +408,11 @@ def registrar_estudiante():
         lugar = data.get("lugar", "").strip()
         duracion = data.get("duracion", "").strip()
 
-        if not numero_control or not nombre:
+        if not usuarioAlumno or not nombre:
             return jsonify({"success": False, "mensaje": "Faltan datos obligatorios (Control o Nombre)"}), 400
         
         # Verificar si el estudiante ya existe
-        estudiante_existente = session.query(Estudiante).filter_by(numero_control=numero_control).first()
+        estudiante_existente = session.query(Estudiante).filter_by(usuarioAlumno=usuarioAlumno).first()
         
         # Si NO existe, la contraseña es obligatoria
         if not estudiante_existente and not password:
@@ -420,10 +420,10 @@ def registrar_estudiante():
         
         if not NOMBRE_REGEX.match(nombre):
             return jsonify({"success": False, "mensaje": "El nombre solo puede contener letras y espacios"}), 400
-        if not NUMERO_CONTROL_REGEX.match(numero_control):
-            return jsonify({"success": False, "mensaje": "El número de control debe tener al menos 8 números."}), 400
+        if not NUMERO_CONTROL_REGEX.match(usuarioAlumno):
+            return jsonify({"success": False, "mensaje": "El usuario debe tener al menos 8 caracteres/numeros."}), 400
         if password and not PASSWORD_ESTUDIANTE_REGEX.match(password):
-            return jsonify({"success": False, "mensaje": "La contraseña debe contener al menos 6 números y ninguna letra."}), 400
+            return jsonify({"success": False, "mensaje": "La contraseña debe contener al menos 4 caracteres/numeros"}), 400
         if correo and not CORREO_REGEX.match(correo):
             return jsonify({"success": False, "mensaje": "El correo no es válido (falta un @ o un dominio, ej. .com)"}), 400
         if not presidente or not secretario or not vocal:
@@ -443,13 +443,13 @@ def registrar_estudiante():
             return jsonify({"success": False, "mensaje": "Formatos de fecha/hora inválidos."}), 400
 
         # --- OBTENER O CREAR ESTUDIANTE ---
-        estudiante = session.query(Estudiante).filter_by(numero_control=numero_control).first()
+        estudiante = session.query(Estudiante).filter_by(usuarioAlumno=usuarioAlumno).first()
         if not estudiante:
             # Si no existe, lo creamos (contraseña es obligatoria aqui)
             if not password:
                 return jsonify({"success": False, "mensaje": "La contraseña es obligatoria para nuevos alumnos"}), 400
             estudiante = Estudiante(
-                numero_control=numero_control,
+                usuarioAlumno=usuarioAlumno,
                 password_hash=generate_password_hash(password, method="pbkdf2:sha256", salt_length=16),
                 nombre=nombre, correo=correo, programa=data.get("programa", "").strip()
             )
@@ -509,7 +509,7 @@ def registrar_estudiante():
         ))
         session.commit()
         
-        app.logger.info(f"usuario {request.usuario_actual} registro al estudiante {numero_control}")
+        app.logger.info(f"usuario {request.usuario_actual} registro al estudiante {usuarioAlumno}")
         return jsonify({
             "success": True, "mensaje": f"Seminario agendado para {nombre}",
             "clave_acceso": clave_acceso, "clave_presidente": clave_presidente,
@@ -585,7 +585,7 @@ def eliminar_estudiante(id_estudiante):
         est = session.query(Estudiante).filter_by(id=id_estudiante).first()
         if not est: return jsonify({"success": False, "mensaje": "No encontrado"}), 404
         
-        num_control_respaldo = est.numero_control
+        num_control_respaldo = est.usuarioAlumno
         session.delete(est)
         session.commit()
         
@@ -602,10 +602,31 @@ def eliminar_estudiante(id_estudiante):
 def obtener_estudiantes():
     session = Session()
     try:
-        lista = []
-        estudiantes = session.query(Estudiante).options(
+        # Obtiene los parametros enviados
+        page = int(request.args.get('page', 1))
+        per_page = 10
+        search = request.args.get('search', '').strip()
+
+        # Prepara la consulta base
+        query = session.query(Estudiante).options(
             selectinload(Estudiante.seminarios).selectinload(Seminario.evaluaciones)
-        ).all()
+        )
+
+        # Si hay texto de búsqueda se aplica el filtro en MySQL
+        if search:
+            query = query.filter(
+                (Estudiante.nombre.ilike(f'%{search}%')) |
+                (Estudiante.usuarioAlumno.ilike(f'%{search}%'))
+            )
+
+        # Conteo del total sin cargar los datos
+        total_records = query.count()
+        total_pages = (total_records + per_page - 1) // per_page
+
+        # Extracción de los 10 alumnos que tocan en esta página
+        estudiantes = query.order_by(Estudiante.id.desc()).offset((page - 1) * per_page).limit(per_page).all()
+
+        lista = []
         for est in estudiantes:
             sems_list = []
             activos = 0
@@ -633,11 +654,21 @@ def obtener_estudiantes():
             
             sems_list.sort(key=lambda x: x['fecha'], reverse=True)
             lista.append({
-                "id_estudiante": est.id, "nombre": est.nombre, "numero_control": est.numero_control,
+                "id_estudiante": est.id, "nombre": est.nombre, "usuarioAlumno": est.usuarioAlumno,
                 "correo": est.correo, "programa": est.programa, "seminarios_activos": activos,
                 "seminarios": sems_list
             })
-        return jsonify(lista), 200
+
+        # Retorno de los datos
+        return jsonify({
+            "success": True,
+            "estudiantes": lista,
+            "total_pages": total_pages if total_pages > 0 else 1,
+            "current_page": page
+        }), 200
+    except Exception as e:
+        session.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
     finally:
         session.close()
 
@@ -652,19 +683,19 @@ def editar_solo_estudiante(id_estudiante):
         if not est: return jsonify({"success": False, "mensaje": "Estudiante no encontrado"}), 404
         
         data = request.get_json() or {}
-        num_control = data.get("numero_control", "").strip()
+        usuarioAlumno = data.get("usuarioAlumno", "").strip()
         nombre = data.get("nombre", "").strip()
-        if not num_control or not nombre: return jsonify({"success": False, "mensaje": "Control y Nombre obligatorios"}), 400
+        if not usuarioAlumno or not nombre: return jsonify({"success": False, "mensaje": "Control y Nombre obligatorios"}), 400
         
-        if num_control != est.numero_control and session.query(Estudiante).filter_by(numero_control=num_control).first():
+        if usuarioAlumno != est.usuarioAlumno and session.query(Estudiante).filter_by(usuarioAlumno=usuarioAlumno).first():
             return jsonify({"success": False, "mensaje": "Número de control ocupado por otro alumno"}), 400
 
-        if not NUMERO_CONTROL_REGEX.match(num_control):
+        if not NUMERO_CONTROL_REGEX.match(usuarioAlumno):
             return jsonify({"success": False, "mensaje": "El número de control debe tener al menos 8 números."}), 400
         if not NOMBRE_REGEX.match(nombre):
             return jsonify({"success": False, "mensaje": "El nombre solo puede contener letras y espacios."}), 400
             
-        est.numero_control = num_control
+        est.usuarioAlumno = usuarioAlumno
         est.nombre = nombre
         est.correo = data.get("correo", "").strip()
         est.programa = data.get("programa", est.programa).strip()
@@ -678,6 +709,50 @@ def editar_solo_estudiante(id_estudiante):
         return jsonify({"success": True, "mensaje": "Datos del alumno actualizados exitosamente."})
     except Exception as e:
         session.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
+    finally:
+        session.close()
+
+@app.route("/buscar-alumnos-simple", methods=["GET"])
+@token_requerido
+def buscar_alumnos_simple():
+    session = Session()
+    try:
+        search = request.args.get('search', '').strip()
+        page = int(request.args.get('page', 1))
+        per_page = 10
+        
+        query = session.query(Estudiante)
+        
+        if search:
+            query = query.filter(
+                (Estudiante.nombre.ilike(f'%{search}%')) | 
+                (Estudiante.usuarioAlumno.ilike(f'%{search}%'))
+            )
+            
+        total_records = query.count()
+        has_more = (page * per_page) < total_records
+            
+        estudiantes = query.order_by(Estudiante.id.desc()).offset((page - 1) * per_page).limit(per_page).all()
+        
+        lista = []
+        for est in estudiantes:
+            lista.append({
+                "id_estudiante": est.id,
+                "nombre": est.nombre,
+                "usuarioAlumno": est.usuarioAlumno,
+                "correo": est.correo,
+                "programa": est.programa
+            })
+            
+        return jsonify({
+            "success": True, 
+            "estudiantes": lista,
+            "has_more": has_more,
+            "total": total_records
+        }), 200
+    except Exception as e:
+        app.logger.error(f"Error en búsqueda simple: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
     finally:
         session.close()
@@ -707,7 +782,7 @@ def obtener_seminario_editable(id_seminario):
         jurado = parsear_jurado(seminario.jurado_texto)
 
         return jsonify({"success": True, "datos": {
-            "id_estudiante": estudiante.id, "id_seminario": seminario.id, "numero_control": estudiante.numero_control,
+            "id_estudiante": estudiante.id, "id_seminario": seminario.id, "usuarioAlumno": estudiante.usuarioAlumno,
             "nombre": estudiante.nombre, "correo": estudiante.correo, "programa": estudiante.programa,
             "proyecto": seminario.proyecto, "tipo_seminario": seminario.tipo_seminario, "modalidad": seminario.modalidad or "",
             "lugar": seminario.lugar or "", "duracion": seminario.duracion or "", "fecha": str(seminario.fecha) if seminario.fecha else "",
@@ -757,7 +832,7 @@ def mi_informacion():
 
         return jsonify({"success": True, "datos": {
             "nombre": estudiante.nombre, 
-            "numero_control": estudiante.numero_control,
+            "usuarioAlumno": estudiante.usuarioAlumno,
             "correo": estudiante.correo,
             "programa": estudiante.programa,
             "seminarios": lista_seminarios
@@ -890,8 +965,34 @@ def obtener_retroalimentacion(id_seminario):
 def obtener_docentes():
     session = Session()
     try:
-        docentes = session.query(UsuarioEvaluador).filter_by(es_admin=False).all()
-        return jsonify([{"id": d.id, "usuario": d.usuario, "nombre_completo": d.nombre_completo} for d in docentes]), 200
+        page = int(request.args.get('page', 1))
+        per_page = 10
+        search = request.args.get('search', '').strip()
+
+        query = session.query(UsuarioEvaluador).filter_by(es_admin=False)
+
+        if search:
+            query = query.filter(
+                (UsuarioEvaluador.nombre_completo.ilike(f'%{search}%')) |
+                (UsuarioEvaluador.usuario.ilike(f'%{search}%'))
+            )
+
+        total_records = query.count()
+        total_pages = (total_records + per_page - 1) // per_page
+
+        docentes = query.order_by(UsuarioEvaluador.id.desc()).offset((page - 1) * per_page).limit(per_page).all()
+
+        lista = [{"id": d.id, "usuario": d.usuario, "nombre_completo": d.nombre_completo} for d in docentes]
+
+        return jsonify({
+            "success": True,
+            "docentes": lista,
+            "total_pages": total_pages if total_pages > 0 else 1,
+            "current_page": page
+        }), 200
+    except Exception as e:
+        session.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
     finally:
         session.close()
 
@@ -999,7 +1100,7 @@ def descargar_reporte():
             
             proyectos_str = " | ".join(nombres_proyectos) if nombres_proyectos else "Sin proyectos"
             
-            ws.append([est.numero_control, est.nombre, activos, evaluados, proyectos_str])
+            ws.append([est.usuarioAlumno, est.nombre, activos, evaluados, proyectos_str])
             
         aplicar_formato_excel(ws)
 
@@ -1039,7 +1140,7 @@ def descargar_agenda():
             if anio_filtro != 'todos' and s_anio != anio_filtro: continue
             
             hora_str = s.hora.strftime('%H:%M') if s.hora else 'Sin hora'
-            ws.append([str(s.fecha), hora_str, s.lugar, s.modalidad, s.estudiante.nombre, s.estudiante.numero_control, s.tipo_seminario, s.proyecto])
+            ws.append([str(s.fecha), hora_str, s.lugar, s.modalidad, s.estudiante.nombre, s.estudiante.usuarioAlumno, s.tipo_seminario, s.proyecto])
             
         aplicar_formato_excel(ws)
 
@@ -1051,6 +1152,66 @@ def descargar_agenda():
         respuesta.mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         respuesta.headers["Content-Disposition"] = f"attachment;filename=agenda_{mes_filtro}_{anio_filtro}.xlsx"
         return respuesta
+    finally:
+        session.close()
+
+@app.route("/agenda-paginada", methods=["GET"])
+@token_requerido
+def agenda_paginada():
+    session = Session()
+    try:
+        mes_filtro = request.args.get('mes', 'todos')
+        anio_filtro = request.args.get('anio', 'todos')
+        page = int(request.args.get('page', 1))
+        per_page = 15
+
+        query = session.query(Seminario).join(Estudiante)
+        
+        if anio_filtro != 'todos':
+            query = query.filter(extract('year', Seminario.fecha) == int(anio_filtro))
+        if mes_filtro != 'todos':
+            query = query.filter(extract('month', Seminario.fecha) == int(mes_filtro))
+            
+        total_records = query.count()
+        has_more = (page * per_page) < total_records
+        
+        # Ordenamos los seminarios más recientes primero
+        seminarios_bd = query.order_by(Seminario.fecha.asc(), Seminario.hora.asc()).offset((page - 1) * per_page).limit(per_page).all()
+        
+        eventos = []
+        for sem in seminarios_bd:
+            if not sem.fecha: continue
+            
+            opciones_meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
+            fecha_str = f"{sem.fecha.day} de {opciones_meses[sem.fecha.month - 1]} de {sem.fecha.year}"
+            
+            eventos.append({
+                "id_seminario": sem.id,
+                "proyecto": sem.proyecto,
+                "tipo_seminario": sem.tipo_seminario,
+                "lugar": sem.lugar or "No definido",
+                "modalidad": sem.modalidad or "Presencial",
+                "fecha_raw": str(sem.fecha),
+                "fecha_bonita": fecha_str,
+                "hora": sem.hora.strftime("%H:%M") if sem.hora else "00:00",
+                "clave_acceso": sem.clave_acceso,
+                "presidente": sem.clave_presidente,
+                "secretario": sem.clave_secretario,
+                "vocal": sem.clave_vocal,
+                "nombre_estudiante": sem.estudiante.nombre,
+                "usuarioAlumno": sem.estudiante.usuarioAlumno,
+                "programa": sem.estudiante.programa
+            })
+            
+        return jsonify({
+            "success": True, 
+            "eventos": eventos,
+            "has_more": has_more,
+            "total": total_records
+        }), 200
+    except Exception as e:
+        app.logger.error(f"Error en agenda paginada: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
     finally:
         session.close()
 

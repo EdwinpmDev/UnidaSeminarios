@@ -41,12 +41,12 @@
             </h2>
             <div class="grid" style="margin-top: 15px;">
                 <div><label>Nombre:</label><p id="lbl-nombre" style="font-weight: bold;">---</p></div>
-                <div><label>No. Control:</label><p id="lbl-control">---</p></div>
+                <div><label>No. Control:</label><p id="lbl-usuarioAlumno">---</p></div>
                 <div><label>Correo:</label><p id="lbl-correo">---</p></div>
+                <div><label>Programa:</label><p id="lbl-programa">---</p></div>
             </div>
         </section>
 
-        <!-- Contenedor dinámico donde se meteran los seminarios -->
         <div id="contenedor-seminarios"></div>
 
     </main>
@@ -62,8 +62,9 @@
 
                     // Llenar datos base
                     document.getElementById("lbl-nombre").textContent = d.nombre;
-                    document.getElementById("lbl-control").textContent = d.numero_control;
+                    document.getElementById("lbl-usuarioAlumno").textContent = d.usuarioAlumno;
                     document.getElementById("lbl-correo").textContent = d.correo || 'sin correo';
+                    document.getElementById("lbl-programa").textContent = d.programa;
                     document.getElementById("info-card-base").style.display = "block";
 
                     const contenedor = document.getElementById("contenedor-seminarios");
