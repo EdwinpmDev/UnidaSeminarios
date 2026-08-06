@@ -26,23 +26,23 @@ def validar_posicion():
         if token_data.get("rol") != "evaluador":
             return jsonify({"success": False, "mensaje": "Acceso denegado"}), 403
 
-        seminario = session.query(Seminario).filter_by(id=token_data["id_seminario"]).first()
-        codigo = (request.get_json() or {}).get("codigo_posicion", "").strip().upper()
+        seminario_id = token_data["id_seminario"]
+        data = request.get_json() or {}
+        rol = data.get("rol_evaluador", "").strip()
+        nombre = data.get("nombre_evaluador", "").strip()
 
-        mapa_codigos = {"Presidente": seminario.clave_presidente, "Secretario": seminario.clave_secretario, "Vocal": seminario.clave_vocal}
-        rol_encontrado = next((r for r, c in mapa_codigos.items() if c and c == codigo), None)
+        if not rol or not nombre:
+            return jsonify({"success": False, "mensaje": "Faltan datos de identificación"}), 400
 
-        if not rol_encontrado:
-            return jsonify({"success": False, "mensaje": "Código incorrecto"}), 401
-
-        if session.query(Evaluacion).filter_by(seminario_id=seminario.id, evaluador_rol=rol_encontrado).first():
-            return jsonify({"success": False, "mensaje": f"El puesto de {rol_encontrado} ya fue evaluado."}), 409
+        if rol != "Externo":
+            if session.query(Evaluacion).filter_by(seminario_id=seminario_id, evaluador_rol=rol).first():
+                return jsonify({"success": False, "mensaje": f"El puesto de {rol} ya fue evaluado."}), 409
 
         nuevo_token = jwt.encode(
-            {"id_seminario": seminario.id, "rol": "evaluador", "rol_evaluador": rol_encontrado, "exp": datetime.now(timezone.utc) + timedelta(hours=8)},
+            {"id_seminario": seminario_id, "rol": "evaluador", "rol_evaluador": rol, "nombre_evaluador": nombre, "exp": datetime.now(timezone.utc) + timedelta(hours=8)},
             JWT_SECRET, algorithm="HS256"
         )
-        respuesta = make_response(jsonify({"success": True, "rol_evaluador": rol_encontrado, "nombre_evaluador": parsear_jurado(seminario.jurado_texto).get(rol_encontrado, "")}))
+        respuesta = make_response(jsonify({"success": True}))
         respuesta.set_cookie('unida_token', nuevo_token, httponly=True, secure=not DEBUG_MODE, samesite='Lax', max_age=28800)
         return respuesta
     finally:
@@ -79,7 +79,7 @@ def guardar_evaluacion():
         calif_final = round(((sum(respuestas[0:8]) + (sum(respuestas[8:12]) * 2.0)) / 120.0) * 100, 1)
 
         session.add(Evaluacion(
-            seminario_id=id_seminario, evaluador_nombre=data.get("evaluador_nombre"),
+            seminario_id=id_seminario, evaluador_nombre=token_data.get("nombre_evaluador", data.get("evaluador_nombre")),
             evaluador_rol=evaluador_rol, calificacion_final=calif_final, comentarios=data.get("comentarios", "").strip()
         ))
         session.commit()

@@ -48,30 +48,25 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 if (btnValidarPosicion) {
     btnValidarPosicion.addEventListener('click', async () => {
-        const codigo = codigoPosicionInput.value.trim();
+        const rol = "Externo";
+        const nombre = document.getElementById('evaluador_nombre').value.trim();
         errorPosicion.classList.add('hidden');
 
-        if (!codigo) {
-            errorPosicion.textContent = 'Ingresa tu código de posición.';
-            errorPosicion.classList.remove('hidden');
-            return;
-        }
-
         btnValidarPosicion.disabled = true;
-        btnValidarPosicion.textContent = 'Verificando...';
+        btnValidarPosicion.textContent = 'Verificando disponibilidad...';
 
         try {
             const res = await fetch(`${API_BASE}/validar-posicion`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ codigo_posicion: codigo })
+                body: JSON.stringify({ rol_evaluador: rol, nombre_evaluador: nombre })
             });
             const data = await res.json();
 
             if (data.success) {
-                mostrarFormularioConRol(data.rol_evaluador, data.nombre_evaluador);
+                mostrarFormularioConRol(rol, nombre);
             } else {
-                errorPosicion.textContent = data.mensaje || 'Código incorrecto.';
+                errorPosicion.textContent = data.mensaje || 'Error al validar la posición.';
                 errorPosicion.classList.remove('hidden');
             }
         } catch (error) {
@@ -79,30 +74,35 @@ if (btnValidarPosicion) {
             errorPosicion.classList.remove('hidden');
         } finally {
             btnValidarPosicion.disabled = false;
-            btnValidarPosicion.textContent = 'Confirmar posición';
+            btnValidarPosicion.textContent = 'Comenzar Evaluación';
         }
     });
+}
+
+function verificarFormularioIdentificacion() {
+    const nombre = document.getElementById('evaluador_nombre').value.trim();
+    const btnComenzar = document.getElementById('btnValidarPosicion');
+
+    if (nombre.length >= 4) {
+        btnComenzar.disabled = false;
+    } else {
+        btnComenzar.disabled = true;
+    }
 }
 
 
 function mostrarFormularioConRol(rol, nombre) {
     gatePosicion.classList.add('hidden');
     tarjetaEvaluacion.classList.remove('hidden');
-    document.getElementById('rolAsignadoTexto').textContent = rol;
+    
     document.getElementById('evaluador_rol_fijo').value = rol;
-
-    const inputNombre = document.getElementById('evaluador_nombre');
-    inputNombre.value = nombre || '';
-    inputNombre.readOnly = true;
-    inputNombre.style.backgroundColor = '#e2e8f0';
-    inputNombre.style.color = '#475569';
-    inputNombre.style.cursor = 'not-allowed';
+    document.getElementById('display-nombre-evaluador').textContent = nombre;
 
     if (seminarioData) {
         prellenarDatos();
     }
-    
-    evaluarFlujoProgresivo();
+
+    validarComentarios();
 }
 
 function prellenarDatos() {
@@ -128,14 +128,6 @@ function prellenarDatos() {
     document.getElementById('sec-paso3').classList.remove('disabled');
 }
 
-function evaluarFlujoProgresivo() {
-    const nombreEvaluador = document.getElementById('evaluador_nombre').value.trim();
-    if (nombreEvaluador.length >= 4) {
-        validarComentarios(); 
-    } else {
-        document.getElementById('btn-enviar-todo').disabled = true;
-    }
-}
 
 function construirQuest(containerId, min, max, maxEscala) {
     const container = document.getElementById(containerId);
@@ -161,11 +153,10 @@ function validarComentarios() {
     const texto = document.getElementById('txt-comentarios').value.trim();
     const info = document.getElementById('comentarios-info');
     const formValido = document.getElementById('evalForm').checkValidity();
-    const nombreEvaluador = document.getElementById('evaluador_nombre').value.trim();
 
     info.textContent = `${texto.length} / 50 caracteres`;
 
-    if (texto.length >= 50 && formValido && nombreEvaluador.length >= 4) {
+    if (texto.length >= 50 && formValido) {
         info.className = "char-counter valid";
         document.getElementById('btn-enviar-todo').disabled = false;
     } else {

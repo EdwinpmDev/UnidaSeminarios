@@ -135,7 +135,7 @@
                                         </div>
                                         <div style="grid-column: 1 / -1; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid var(--border);">
                                             <label style="color: var(--primary-dark);">Comité evaluador:</label>
-                                            <p style="margin-top: 5px; color: var(--text);">${sem.jurado_texto}</p>
+                                            ${sem.jurado_texto ? `<p style="margin-top: 5px; color: var(--text);">${sem.jurado_texto}</p>` : '<p style="margin-top: 5px; color: #6b7280; font-style: italic;">No se ha asignado jurado aún.</p>'}
                                         </div>
                                         <div style="grid-column: 1 / -1; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid var(--border);">
                                             <label style="color: var(--primary-dark);">Estado de las evaluaciones:</label>

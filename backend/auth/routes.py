@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 import jwt
 from flask import Blueprint, current_app, jsonify, make_response, redirect, request
@@ -73,6 +74,35 @@ def login_evaluador():
         if not seminario:
             current_app.logger.warning(f"intento de acceso a seminario con clave invalida: {clave} desde {get_remote_address()}")
             return jsonify({"success": False, "mensaje": "Clave incorrecta"}), 401
+
+        # --- VALIDACIÓN DE PLAZOS (ANTES DE INICIAR Y 72 HORAS) ---
+        if seminario.fecha and seminario.hora:
+            fecha_inicio = datetime.combine(seminario.fecha, seminario.hora).replace(tzinfo=ZoneInfo("America/Mexico_City"))
+            fecha_fin = fecha_inicio + timedelta(hours=72)
+            ahora = datetime.now(ZoneInfo("America/Mexico_City"))
+            
+            inicio_str = fecha_inicio.strftime("%d/%m/%Y %I:%M %p")
+            fin_str = fecha_fin.strftime("%d/%m/%Y %I:%M %p")
+
+            if ahora < fecha_inicio:
+                return jsonify({
+                    "success": False, 
+                    "mensaje": f"Todavía no se puede evaluar este seminario.\n\n"
+                        f"🎓 Alumno: {seminario.estudiante.nombre}\n"
+                        f"📚 Proyecto: {seminario.proyecto}\n\n"
+                        f"🟢 Disponible desde:\n{inicio_str}\n"
+                        f"🔴 Plazo máximo:\n{fin_str}"
+                }), 403
+
+            if ahora > fecha_fin:
+                return jsonify({
+                    "success": False, 
+                    "mensaje": f"El periodo de evaluación caducó.\nInicio: {inicio_str}\nFin: {fin_str}"
+                        f"⏳ El plazo máximo de 72 horas para realizar la evaluación ha concluido.\n\n"
+                        f"🟢 Inició: {inicio_str}\n"
+                        f"🔴 Finalizó: {fin_str}"
+                }), 403
+        # ------------------------------
 
         token_jwt = jwt.encode(
             {"id_seminario": seminario.id, "rol": "evaluador", "exp": datetime.now(timezone.utc) + timedelta(hours=8)},

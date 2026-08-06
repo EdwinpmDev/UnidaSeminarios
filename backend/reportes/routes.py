@@ -1,4 +1,6 @@
 from io import BytesIO
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import openpyxl
 from flask import Blueprint, current_app, jsonify, make_response, request
@@ -7,7 +9,7 @@ from sqlalchemy.orm import selectinload
 
 from extensions import Session
 from models import Estudiante, Seminario, UsuarioEvaluador
-from utils import aplicar_formato_excel
+from utils import aplicar_formato_excel, parsear_jurado
 
 from auth.decorators import admin_requerido, token_requerido
 
@@ -133,19 +135,34 @@ def agenda_paginada():
             opciones_meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
             fecha_str = f"{sem.fecha.day} de {opciones_meses[sem.fecha.month - 1]} de {sem.fecha.year}"
 
+            jurado = parsear_jurado(sem.jurado_texto)
+
+            # Calcular estado de plazo
+            estado_plazo = "Activo"
+            if sem.fecha and sem.hora:
+                fecha_inicio = datetime.combine(sem.fecha, sem.hora).replace(tzinfo=ZoneInfo("America/Mexico_City"))
+                fecha_fin = fecha_inicio + timedelta(hours=72)
+                ahora = datetime.now(ZoneInfo("America/Mexico_City"))
+                
+                if ahora < fecha_inicio:
+                    estado_plazo = "Pendiente"
+                elif ahora > fecha_fin:
+                    estado_plazo = "Terminado"
+
             eventos.append({
                 "id_seminario": sem.id,
                 "proyecto": sem.proyecto,
                 "tipo_seminario": sem.tipo_seminario,
                 "lugar": sem.lugar or "No definido",
                 "modalidad": sem.modalidad or "Presencial",
+                "estado_plazo": estado_plazo,
                 "fecha_raw": str(sem.fecha),
                 "fecha_bonita": fecha_str,
                 "hora": sem.hora.strftime("%H:%M") if sem.hora else "00:00",
                 "clave_acceso": sem.clave_acceso,
-                "presidente": sem.clave_presidente,
-                "secretario": sem.clave_secretario,
-                "vocal": sem.clave_vocal,
+                "presidente": jurado.get("Presidente", ""),
+                "secretario": jurado.get("Secretario", ""),
+                "vocal": jurado.get("Vocal", ""),
                 "nombre_estudiante": sem.estudiante.nombre,
                 "usuarioAlumno": sem.estudiante.usuarioAlumno,
                 "programa": sem.estudiante.programa

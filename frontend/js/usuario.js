@@ -179,6 +179,11 @@ window.seleccionarAlumnoExistente = function(control, nombre, correo, programa) 
     document.getElementById('nombre').value = nombre;
     document.getElementById('correo').value = correo;
     document.getElementById('programa').value = programa;
+
+    const programaSelect = document.getElementById('programa');
+    if (programaSelect) {
+        programaSelect.dispatchEvent(new Event('change'));
+    }
     
     const inputPass = document.getElementById('password_estudiante');
     if (inputPass) {
@@ -470,12 +475,8 @@ formSeminario.addEventListener('submit', async (e) => {
         if(res.success) {
             alert(
                 `✅ Seminario agendado correctamente.\n\n` +
-                `Clave general de acceso: ${res.clave_acceso || payload.clave_acceso}\n\n` +
-                `Códigos individuales de posición (uno por cada evaluador):\n` +
-                `  Presidente: ${res.clave_presidente}\n` +
-                `  Secretario: ${res.clave_secretario}\n` +
-                `  Vocal: ${res.clave_vocal}\n\n` +
-                `Entrega cada código solo a la persona correspondiente. Puedes volver a verlos en cualquier momento desde el botón "Retroalimentación" de este alumno.`
+                `Clave de acceso al seminario: ${res.clave_acceso || payload.clave_acceso}\n\n` +
+                `⏳ Se tiene un plazo máximo de 72 horas para realizar la evaluación desde su hora de inicio.`
             );
             formSeminario.reset();
             if (document.getElementById('clave_acceso')) {
@@ -709,39 +710,52 @@ document.getElementById('btnCerrarHistorial').addEventListener('click', () => do
 // --- LÓGICA PARA OPCIONES DE SEMINARIO DINÁMICAS ---
 const programaSelect = document.getElementById('programa');
 const tipoSeminarioSelect = document.getElementById('tipo_seminario');
+const editTipoSeminarioSelect = document.getElementById('edit_tipo_seminario');
 
-if (programaSelect && tipoSeminarioSelect) {
-    programaSelect.addEventListener('change', (e) => {
-        const programaElegido = e.target.value;
-        tipoSeminarioSelect.innerHTML = '';
+window.actualizarOpcionesSeminario = function(programaElegido) {
+    if (tipoSeminarioSelect) tipoSeminarioSelect.innerHTML = '';
+    if (editTipoSeminarioSelect) editTipoSeminarioSelect.innerHTML = '';
 
-        let opciones = [];
-        
-        if (programaElegido === 'Maestría') {
-            opciones = [
-                "1.- Prototipo", 
-                "2.- Tutorial", 
-                "3.- Culminacion"
-            ];
-        } else if (programaElegido === 'Doctorado') {
-            opciones = [
-                "1.- Prototipo", 
-                "2.- Tutorial", 
-                "3.- Avance 1", 
-                "4.- Predoctoral", 
-                "5.- Tutorial", 
-                "6.- Avance 2", 
-                "7.- Tutorial", 
-                "8.- Culminacion"
-            ];
-        }
+    let opciones = [];
+    
+    if (programaElegido === 'Maestría') {
+        opciones = [
+            "1.- Prototipo", 
+            "2.- Tutorial", 
+            "3.- Culminacion"
+        ];
+    } else if (programaElegido === 'Doctorado') {
+        opciones = [
+            "1.- Prototipo", 
+            "2.- Tutorial", 
+            "3.- Avance 1", 
+            "4.- Predoctoral", 
+            "5.- Tutorial", 
+            "6.- Avance 2", 
+            "7.- Tutorial", 
+            "8.- Culminacion"
+        ];
+    }
 
-        opciones.forEach(op => {
+    opciones.forEach(op => {
+        if (tipoSeminarioSelect) {
             const optionElement = document.createElement('option');
             optionElement.value = op;
             optionElement.textContent = op;
             tipoSeminarioSelect.appendChild(optionElement);
-        });
+        }
+        if (editTipoSeminarioSelect) {
+            const optionElement2 = document.createElement('option');
+            optionElement2.value = op;
+            optionElement2.textContent = op;
+            editTipoSeminarioSelect.appendChild(optionElement2);
+        }
+    });
+};
+
+if (programaSelect) {
+    programaSelect.addEventListener('change', (e) => {
+        window.actualizarOpcionesSeminario(e.target.value);
     });
 }
 
@@ -833,18 +847,25 @@ window.verRetroalimentacion = async function(idSeminario, nombreEstudiante) {
             return;
         }
 
-        const codigosBloque = `
-            <div style="background:#f8fafc; border:1px solid var(--border); border-radius:8px; padding:10px 12px; margin-bottom:14px; font-size:0.85rem;">
-                <strong>Clave general:</strong> <span style="font-family:monospace;">${data.clave_acceso}</span><br>
-                <strong>Códigos de posición pendientes:</strong>
+        const rolesAsignados = ["Presidente", "Secretario", "Vocal"].filter(rol => data.codigos_posicion[rol].nombre);
+                
+        let juradoListaHTML = '';
+        if (rolesAsignados.length > 0) {
+            juradoListaHTML = `
+                <br><strong>Comité asignado:</strong>
                 <ul style="margin: 6px 0 0 18px;">
-                    ${["Presidente", "Secretario", "Vocal"].map(rol => {
+                    ${rolesAsignados.map(rol => {
                         const info = data.codigos_posicion[rol];
-                        return info.codigo
-                            ? `<li style="margin-bottom:4px;"><strong>${rol} (${info.nombre}):</strong> <span style="font-family:monospace; color: var(--primary); font-weight:bold; font-size: 1.05rem; background: #e0e7ff; padding: 2px 6px; border-radius: 4px; margin-left: 4px;">${info.codigo}</span></li>`
-                            : `<li style="margin-bottom:4px;"><strong>${rol} (${info.nombre}):</strong> ✅ ya evaluó</li>`;
+                        return `<li style="margin-bottom:4px;"><strong>${rol}:</strong> ${info.nombre}</li>`;
                     }).join('')}
                 </ul>
+            `;
+        }
+
+        const codigosBloque = `
+            <div style="background:#f8fafc; border:1px solid var(--border); border-radius:8px; padding:10px 12px; margin-bottom:14px; font-size:0.85rem;">
+                <strong>Clave de acceso al seminario:</strong> <span style="font-family:monospace; color: var(--primary); font-weight:bold; font-size: 1.05rem; background: #e0e7ff; padding: 2px 6px; border-radius: 4px; margin-left: 4px;">${data.clave_acceso}</span>
+                ${juradoListaHTML}
             </div>
         `;
 
@@ -914,6 +935,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     const mesActual = String(hoy.getMonth() + 1).padStart(2, '0');
     if (selectMesAgenda) selectMesAgenda.value = mesActual;
     selectAnioAgenda.value = anioActual;
+    }
+
+    const programaInicial = document.getElementById('programa')?.value;
+    if (programaInicial) {
+        // Disparamos el evento change para que actualice las opciones
+        const programaSelect = document.getElementById('programa');
+        if (programaSelect) {
+            programaSelect.dispatchEvent(new Event('change'));
+        }
     }
 
     try {
@@ -1237,7 +1267,9 @@ window.abrirEdicionAlumno = async function(idSeminario) {
         }
         const d = data.datos;
         document.getElementById('editSeminarioId').value = d.id_seminario;
-        document.getElementById('edit_id_estudiante').value = d.id_estudiante; 
+        document.getElementById('edit_id_estudiante').value = d.id_estudiante;
+
+        window.actualizarOpcionesSeminario(d.programa)
         
         // Carga exclusiva de datos del seminario (ya no buscamos los del alumno aquí)
         document.getElementById('edit_titulo').value = d.proyecto;
@@ -1276,7 +1308,7 @@ if (modalEditarAlumno) {
 if (btnGuardarEditarAlumno) {
     btnGuardarEditarAlumno.addEventListener('click', async () => {
         const camposObligatorios = [
-            'edit_titulo', 'edit_fecha', 'edit_hora', 'edit_presidente', 'edit_secretario', 'edit_vocal'
+            'edit_titulo', 'edit_fecha', 'edit_hora'
         ];
         for (const idCampo of camposObligatorios) {
             const el = document.getElementById(idCampo);
@@ -1327,7 +1359,8 @@ if (btnGuardarEditarAlumno) {
                 const vistaAgenda = document.getElementById('vista-agenda');
                 if (!vistaAgenda.classList.contains('hidden')) {
                     // Si estamos en la agenda, recargamos la agenda
-                    renderizarAgenda();
+                    //renderizarAgenda();
+                    cargarAgendaBackend(paginaAgendaActual, false);
                 } else {
                     const estudianteId = parseInt(document.getElementById('edit_id_estudiante').value);
                     const estudianteActualizado = listaGlobalEstudiantes.find(e => e.id_estudiante === estudianteId);
@@ -1480,6 +1513,18 @@ if (btnCrearDocente) {
             // Renderizar las tarjetas
             let html = '';
             data.eventos.forEach(ev => {
+                // Definir colores según el estado (verde por defecto para Activo)
+                let bgEstado = '#dcfce7'; 
+                let colorEstado = '#166534'; 
+                
+                if (ev.estado_plazo === 'Terminado') {
+                    bgEstado = '#fee2e2'; // Rojo suave
+                    colorEstado = '#991b1b'; // Texto rojo oscuro
+                } else if (ev.estado_plazo === 'Pendiente') {
+                    bgEstado = '#ffedd5'; // Naranja suave
+                    colorEstado = '#9a3412'; // Texto naranja oscuro
+                }
+
                 html += `
                 <div style="border-left: 5px solid var(--accent); background: #f8fafc; border-radius: 8px; padding: 18px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); cursor: pointer; transition: transform 0.2s;" 
                     onclick="verDetallesAgenda(${ev.id_seminario})" 
@@ -1488,7 +1533,7 @@ if (btnCrearDocente) {
                     
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                         <strong style="color: var(--primary-dark); font-size: 1.1rem;">📅 ${ev.fecha_bonita} - ${ev.hora} hrs</strong>
-                        <span style="background: #e0e7ff; color: var(--primary); padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">${ev.modalidad}</span>
+                        <span style="background: ${bgEstado}; color: ${colorEstado}; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">${ev.estado_plazo}</span>
                     </div>
                     
                     <div style="font-size: 1.05rem; font-weight: bold; margin-bottom: 4px;">🎓 ${ev.nombre_estudiante}</div>
@@ -1544,12 +1589,19 @@ if (btnCrearDocente) {
             <p style="margin-bottom: 8px;"><strong>📅 Fecha y Hora:</strong> ${ev.fecha_raw} a las ${ev.hora}</p>
             <p style="margin-bottom: 8px;"><strong>📍 Lugar:</strong> ${ev.lugar} (${ev.modalidad})</p>
 
+        ${(ev.presidente || ev.secretario || ev.vocal) ? `
         <div style="background: #f8fafc; border: 1px solid var(--border); padding: 12px; border-radius: 8px; margin-bottom: 15px;">
-            <p style="margin-bottom: 10px; color: var(--primary-dark);"><strong>🔑 Clave General:</strong> <span style="font-family: monospace; font-size: 1.1rem; color: var(--primary); font-weight: bold; background: #e0e7ff; padding: 2px 6px; border-radius: 4px;">${ev.clave_acceso}</span></p>
-            <p style="margin-bottom: 4px; font-size: 0.9rem;"><strong>Presidente:</strong> <span style="font-family: monospace; font-weight: bold;">${ev.presidente || 'N/A'}</span></p>
-            <p style="margin-bottom: 4px; font-size: 0.9rem;"><strong>Secretario:</strong> <span style="font-family: monospace; font-weight: bold;">${ev.secretario || 'N/A'}</span></p>
-            <p style="margin-bottom: 0; font-size: 0.9rem;"><strong>Vocal:</strong> <span style="font-family: monospace; font-weight: bold;">${ev.vocal || 'N/A'}</span></p>
+            <p style="margin-bottom: 10px; color: var(--primary-dark);"><strong>🔑 Clave de seminario:</strong> <span style="font-family: monospace; font-size: 1.1rem; color: var(--primary); font-weight: bold; background: #e0e7ff; padding: 2px 6px; border-radius: 4px;">${ev.clave_acceso}</span></p>
+            <p style="margin-bottom: 8px; font-size: 0.95rem; color: var(--primary-dark);"><strong>Comité evaluador:</strong></p>
+            ${ev.presidente ? `<p style="margin-bottom: 4px; font-size: 0.9rem;"><strong>Presidente:</strong> <span style="font-family: monospace; font-weight: bold;">${ev.presidente}</span></p>` : ''}
+            ${ev.secretario ? `<p style="margin-bottom: 4px; font-size: 0.9rem;"><strong>Secretario:</strong> <span style="font-family: monospace; font-weight: bold;">${ev.secretario}</span></p>` : ''}
+            ${ev.vocal ? `<p style="margin-bottom: 0; font-size: 0.9rem;"><strong>Vocal:</strong> <span style="font-family: monospace; font-weight: bold;">${ev.vocal}</span></p>` : ''}
         </div>
+        ` : `
+        <div style="background: #f8fafc; border: 1px solid var(--border); padding: 12px; border-radius: 8px; margin-bottom: 15px;">
+            <p style="margin-bottom: 0; color: var(--primary-dark);"><strong>🔑 Clave de seminario:</strong> <span style="font-family: monospace; font-size: 1.1rem; color: var(--primary); font-weight: bold; background: #e0e7ff; padding: 2px 6px; border-radius: 4px;">${ev.clave_acceso}</span></p>
+        </div>
+        `}
             
             <div style="text-align: right;">
                 <button onclick="document.getElementById('modalDetallesAgenda').classList.add('hidden'); abrirEdicionAlumno(${ev.id_seminario});" style="padding: 10px 15px; font-size: 0.95rem; border-radius: 6px; border: none; cursor: pointer; background: #d97706; color: white; font-weight: bold;">✏️ Editar Seminario</button>
