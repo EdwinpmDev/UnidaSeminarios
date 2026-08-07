@@ -357,29 +357,43 @@ button[disabled] {
     margin-top: 8px;
     }
 
-/* Contenedor desplazable para la tabla de estudiantes*/
-.table-scroll-container {
-    max-height: 400px;
-    overflow-y: auto;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    margin-top: 15px;
+
+/* --- Estilos para botón de ver contraseña --- */
+.password-container {
+    position: relative;
+    display: block; /* Mantenemos display block para respetar la estructura original */
+    width: 100%;
 }
 
-.table-scroll-container th {
-    position: sticky;
-    top: 0;
-    background: #f8fafc;
-    padding: 12px;
-    z-index: 1;
-    box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
+.password-container input {
+    width: 100%;
+    /* Mantenemos el padding original de tu diseño (10px 12px) pero le damos extra a la derecha */
+    padding-right: 40px !important; 
 }
 
-.table-scroll-container td {
-    padding: 10px 12px;
+.btn-toggle-password {
+    position: absolute;
+    right: 8px; /* Pegado a la derecha, dentro del input */
+    top: 50%;
+    transform: translateY(-50%); /* Centrado verticalmente exacto */
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+    outline: none;
 }
 
-tbody tr:hover {
-    background-color: #f1f5f9;
-    transition: background-color 0.2s ease;
+.btn-toggle-password:hover {
+    color: var(--primary);
+    background: transparent;
+}
+
+.btn-toggle-password:active {
+    transform: translateY(-50%) !important;
 }

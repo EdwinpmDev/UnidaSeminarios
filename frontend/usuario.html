@@ -20,7 +20,10 @@
         </div>
         <div>
           <label for="loginPass">Contraseña</label>
-          <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
+          <div class="password-container">
+            <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
+            <button type="button" class="btn-toggle-password" tabindex="-1" title="Mostrar contraseña">👁️</button>
+          </div>
         </div>
       </div>
       <div id="loginError" class="hidden" style="color: var(--error); font-size: 0.9rem; margin-top: 8px;"></div>
@@ -205,16 +208,23 @@
               <label for="nuevoDocenteUsuario">Usuario (Para iniciar sesión)</label>
               <input type="text" id="nuevoDocenteUsuario" placeholder="mlopez">
             </div>
+
             <div>
-              <label for="nuevoDocentePass">Contraseña (min 8 caracteres/numeros)</label>
-              <input type="password" id="nuevoDocentePass" placeholder="••••••••">
+            <label for="nuevoDocentePass">Contraseña (min 8 caracteres/numeros)</label>
+            <div class="password-container">
+                <input type="password" id="nuevoDocentePass" placeholder="••••••••">
+                <button type="button" class="btn-toggle-password" tabindex="-1" title="Mostrar contraseña">👁️</button>
             </div>
-          </div>
+            <small style="color: #6b7280; font-size: 0.8rem;">La contraseña debe tener al menos 8 caracteres</small>
+            </div>
+            </div>
 
           <div id="msgRegistroDocente" style="margin-top: 10px; font-weight: bold;"></div>
           <div class="row-actions" style="margin-top: 10px; justify-content: space-between;">
             <button type="button" id="btnVerDocentes" style="background: #4b5563;">Ver directorio de docentes 👩‍🏫</button>
             <button type="button" id="btnCrearDocente">Registrar docente</button>
+
+            <button type="button" id="btnEditarMiPerfilAdmin" style="background: #d97706;">Mis datos de Admin ⚙️</button>
           </div>
         </div>
         
@@ -229,9 +239,37 @@
             </div>
 
             <!-- BARRA DE BÚSQUEDA -->
-            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                <input type="text" id="buscadorAlumnos" placeholder="🔍 Buscar por nombre o control..." style="flex: 1; padding: 10px; border-radius: 6px; border: 1px solid var(--border); font-size: 1rem;">
-                <button type="button" id="btnDescargarReporte" style="background: #16a34a; padding: 10px 15px; border-radius: 6px; color: white; border: none; font-weight: bold; cursor: pointer; white-space: nowrap;">Descargar Excel 📥</button>
+            <div style="display: flex; gap: 10px; margin-bottom: 15px; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid var(--border); align-items: flex-end; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 200px;">
+                    <label for="buscadorAlumnos" style="font-size: 0.85rem; font-weight: bold; color: var(--primary-dark);">Buscar alumno</label>
+                    <input type="text" id="buscadorAlumnos" placeholder="🔍 Nombre o control..." style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border); font-size: 1rem;">
+                </div>
+                <div style="flex: 1; min-width: 150px;">
+                    <label for="filtroProgramaAlumnos" style="font-size: 0.85rem; font-weight: bold; color: var(--primary-dark);">Programa</label>
+                    <select id="filtroProgramaAlumnos" style="padding: 8px; border-radius: 6px; border: 1px solid var(--border); width: 100%;">
+                        <option value="todos" selected>Todos los programas</option>
+                        <option value="Maestría">Maestría</option>
+                        <option value="Doctorado">Doctorado</option>
+                    </select>
+                </div>
+                <div style="flex: 1; min-width: 150px;">
+                    <label for="filtroFaseAlumnos" style="font-size: 0.85rem; font-weight: bold; color: var(--primary-dark);">Fase de seminario</label>
+                    <select id="filtroFaseAlumnos" style="padding: 8px; border-radius: 6px; border: 1px solid var(--border); width: 100%;">
+                        <option value="todos" selected>Todas las fases</option>
+                        <option value="1.- Prototipo">1.- Prototipo</option>
+                        <option value="2.- Tutorial">2.- Tutorial</option>
+                        <option value="3.- Avance 1">3.- Avance 1</option>
+                        <option value="3.- Culminacion">3.- Culminacion</option>
+                        <option value="4.- Predoctoral">4.- Predoctoral</option>
+                        <option value="5.- Tutorial">5.- Tutorial</option>
+                        <option value="6.- Avance 2">6.- Avance 2</option>
+                        <option value="7.- Tutorial">7.- Tutorial</option>
+                        <option value="8.- Culminacion">8.- Culminacion</option>
+                    </select>
+                </div>
+                <div>
+                    <button type="button" id="btnDescargarReporte" style="background: #16a34a; padding: 10px 15px; border-radius: 6px; color: white; border: none; font-weight: bold; cursor: pointer; white-space: nowrap;">Descargar Excel 📥</button>
+                </div>
             </div>
 
             <div class="table-scroll-container">
@@ -271,6 +309,7 @@
                 <div>
                     <h2 id="detalles-nombre" style="margin: 0; color: var(--primary-dark);">Nombre Alumno</h2>
                     <p id="detalles-control" style="margin: 5px 0 0; color: #4b5563; font-weight: bold;">Control</p>
+                    <p id="detalles-programa" style="margin: 2px 0 0; color: #4b5563; font-weight: bold;">Programa</p>
                 </div>
                 <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                     <button type="button" id="btnEditarSoloAlumno" style="background: #d97706; padding: 8px 15px; border-radius: 6px; color: white; border: none; font-weight: bold; cursor: pointer;">Editar Alumno</button>
@@ -313,10 +352,15 @@
                         <option value="Doctorado">Doctorado</option>
                     </select>
                 </div>
+
                 <div style="grid-column: 1 / -1;">
                     <label for="edit_solo_password">Nueva contraseña (opcional)</label>
-                    <input type="text" id="edit_solo_password" pattern="[A-Za-z0-9]{4,}" title="Mínimo 4 caracteres alfanuméricos" placeholder="Dejar en blanco para no cambiarla" />
+                    <div class="password-container">
+                        <input type="text" id="edit_solo_password" pattern="[A-Za-z0-9]{4,}" title="Mínimo 4 caracteres alfanuméricos" placeholder="Dejar en blanco para no cambiarla" />
+                        <button type="button" class="btn-toggle-password" tabindex="-1" title="Mostrar contraseña">👁️</button>
+                    </div>
                 </div>
+
             </div>
             <div class="row-actions" style="margin-top: 15px;">
                 <button type="button" id="btnGuardarSoloEstudiante">Guardar cambios</button>
@@ -381,8 +425,31 @@
             </div>
 
             <!-- FILTROS DE AGENDA -->
-            <div style="display: flex; gap: 10px; margin-bottom: 15px; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid var(--border); align-items: flex-end;">
-                <div style="flex: 1;">
+            <div style="display: flex; gap: 10px; margin-bottom: 15px; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid var(--border); align-items: flex-end; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 150px;">
+                    <label for="filtroProgramaAgenda" style="font-size: 0.85rem; font-weight: bold; color: var(--primary-dark);">Programa</label>
+                    <select id="filtroProgramaAgenda" style="padding: 8px; border-radius: 6px; border: 1px solid var(--border); width: 100%;">
+                        <option value="todos" selected>Todos los programas</option>
+                        <option value="Maestría">Maestría</option>
+                        <option value="Doctorado">Doctorado</option>
+                    </select>
+                </div>
+                <div style="flex: 1; min-width: 150px;">
+                    <label for="filtroFaseAgenda" style="font-size: 0.85rem; font-weight: bold; color: var(--primary-dark);">Fase de seminario</label>
+                    <select id="filtroFaseAgenda" style="padding: 8px; border-radius: 6px; border: 1px solid var(--border); width: 100%;">
+                        <option value="todos" selected>Todas las fases</option>
+                        <option value="1.- Prototipo">1.- Prototipo</option>
+                        <option value="2.- Tutorial">2.- Tutorial</option>
+                        <option value="3.- Avance 1">3.- Avance 1</option>
+                        <option value="3.- Culminacion">3.- Culminacion</option>
+                        <option value="4.- Predoctoral">4.- Predoctoral</option>
+                        <option value="5.- Tutorial">5.- Tutorial</option>
+                        <option value="6.- Avance 2">6.- Avance 2</option>
+                        <option value="7.- Tutorial">7.- Tutorial</option>
+                        <option value="8.- Culminacion">8.- Culminacion</option>
+                    </select>
+                </div>
+                <div style="flex: 1; min-width: 150px;">
                     <label for="filtroMesAgenda" style="font-size: 0.85rem; font-weight: bold; color: var(--primary-dark);">Mes</label>
                     <select id="filtroMesAgenda" style="padding: 8px; border-radius: 6px; border: 1px solid var(--border); width: 100%;">
                         <option value="todos">Todos los meses</option>
@@ -400,7 +467,7 @@
                         <option value="12">Diciembre</option>
                     </select>
                 </div>
-                <div style="flex: 1;">
+                <div style="flex: 1; min-width: 120px;">
                     <label for="filtroAnioAgenda" style="font-size: 0.85rem; font-weight: bold; color: var(--primary-dark);">Año</label>
                     <select id="filtroAnioAgenda" style="padding: 8px; border-radius: 6px; border: 1px solid var(--border); width: 100%;">
                         <option value="todos">Todos los años</option>
@@ -442,10 +509,16 @@
                     <label for="editDocenteUsuario">Usuario</label>
                     <input type="text" id="editDocenteUsuario" />
                 </div>
+
                 <div>
                     <label for="editDocentePass">Nueva contraseña (opcional)</label>
-                    <input type="password" id="editDocentePass" placeholder="Dejar en blanco para no cambiarla" />
+                    <div class="password-container">
+                        <input type="password" id="editDocentePass" placeholder="Dejar en blanco para no cambiarla" />
+                        <button type="button" class="btn-toggle-password" tabindex="-1" title="Mostrar contraseña">👁️</button>
+                    </div>
+                    <small style="color: #6b7280; font-size: 0.8rem;">La contraseña debe tener al menos 8 caracteres</small>
                 </div>
+
             </div>
             <div id="msgEditarDocente" style="margin-top: 10px; font-weight: bold;"></div>
             <div class="row-actions" style="margin-top: 15px;">
@@ -564,6 +637,36 @@
                     <thead><tr style="border-bottom: 2px solid #ccc;"><th>Nombre</th><th>No. Control</th><th>Acción</th></tr></thead>
                     <tbody id="tablaSeleccionBody"></tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL EDITAR PERFIL ADMIN -->
+    <div id="modalEditarAdmin" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px;">
+        <div style="background: white; border-radius: 10px; max-width: 400px; width: 100%; padding: 25px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 style="margin: 0; color: var(--primary);">Mis datos de administrador</h3>
+                <button type="button" id="btnCerrarEditarAdmin" style="background: #4b5563; color: white; border: none; border-radius: 6px; padding: 6px 12px; cursor: pointer;">✕</button>
+            </div>
+            <div class="grid" style="grid-template-columns: 1fr;">
+                <div>
+                    <label for="editAdminUsuario">Nuevo usuario (opcional)</label>
+                    <input type="text" id="editAdminUsuario" placeholder="Dejar en blanco para conservar el actual" />
+                </div>
+
+                <div>
+                    <label for="editAdminPass">Nueva contraseña (opcional)</label>
+                    <div class="password-container">
+                        <input type="password" id="editAdminPass" placeholder="Dejar en blanco para conservar la actual" />
+                        <button type="button" class="btn-toggle-password" tabindex="-1" title="Mostrar contraseña">👁️</button>
+                    </div>
+                    <small style="color: #6b7280; font-size: 0.8rem;">La contraseña debe tener al menos 8 caracteres</small>
+                </div>
+
+            </div>
+            <div id="msgEditarAdmin" style="margin-top: 10px; font-weight: bold;"></div>
+            <div class="row-actions" style="margin-top: 15px;">
+                <button type="button" id="btnGuardarEditarAdmin">Guardar cambios</button>
             </div>
         </div>
     </div>

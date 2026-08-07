@@ -239,20 +239,25 @@ def obtener_estudiantes():
         page = int(request.args.get('page', 1))
         per_page = 10
         search = request.args.get('search', '').strip()
+        programa = request.args.get('programa', 'todos').strip()
+        fase = request.args.get('fase', 'todos').strip()
 
-        # Prepara la consulta base
         query = session.query(Estudiante).options(
             selectinload(Estudiante.seminarios).selectinload(Seminario.evaluaciones)
         )
 
-        # Si hay texto de búsqueda se aplica el filtro en MySQL
         if search:
             query = query.filter(
                 (Estudiante.nombre.ilike(f'%{search}%')) |
                 (Estudiante.usuarioAlumno.ilike(f'%{search}%'))
             )
+            
+        if programa != 'todos':
+            query = query.filter(Estudiante.programa == programa)
+            
+        if fase != 'todos':
+            query = query.filter(Estudiante.seminarios.any(Seminario.tipo_seminario == fase))
 
-        # Conteo del total sin cargar los datos
         total_records = query.count()
         total_pages = (total_records + per_page - 1) // per_page
 

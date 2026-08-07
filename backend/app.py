@@ -78,9 +78,8 @@ def crear_app():
 
 
 def crear_usuario_administrador_inicial():
-    # crea al administrador maestro basándose en la configuración de entorno
+    # crea al administrador en la configuración de entorno
     from werkzeug.security import generate_password_hash
-
     from models import UsuarioEvaluador
 
     session = Session()
@@ -88,9 +87,18 @@ def crear_usuario_administrador_inicial():
         if not ADMIN_USER or not ADMIN_PASS:
             return
 
-        if not session.query(UsuarioEvaluador).filter_by(usuario=ADMIN_USER).first():
+        # Buscamos si ya existe AL MENOS UN administrador en el sistema
+        admin_existente = session.query(UsuarioEvaluador).filter_by(es_admin=True).first()
+
+        # Solo si no existe NINGÚN administrador, creamos el inicial
+        if not admin_existente:
             pw_hash = generate_password_hash(ADMIN_PASS, method="pbkdf2:sha256", salt_length=16)
-            session.add(UsuarioEvaluador(usuario=ADMIN_USER, password_hash=pw_hash, nombre_completo="Administrador de seminarios", es_admin=True))
+            session.add(UsuarioEvaluador(
+                usuario=ADMIN_USER, 
+                password_hash=pw_hash, 
+                nombre_completo="Administrador de seminarios", 
+                es_admin=True
+            ))
             session.commit()
     except Exception:
         session.rollback()

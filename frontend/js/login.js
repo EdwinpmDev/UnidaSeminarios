@@ -21,10 +21,24 @@ function conmutarSubFormulario(subRol) {
 async function manejarLogin(e, destino) {
     e.preventDefault();
     const form = e.target;
-    const user = (form.querySelector('input[type="text"]') || form.querySelector('input[type="email"]')).value.trim();
-    const pass = form.querySelector('input[type="password"]').value.trim();
+    
+    const user = form.querySelector('input[name="username"]').value.trim();
+    const passInput = form.querySelector('#pass-profesor');
+    const pass = passInput ? passInput.value.trim() : '';
+    
     const btnSubmit = form.querySelector('.btn-submit');
     const errorBox = form.querySelector('.login-error');
+
+    // Validación
+    if (!user || !pass) {
+        if (errorBox) {
+            errorBox.textContent = '⚠️ Completa usuario y contraseña.';
+            errorBox.classList.remove('hidden');
+        }
+        btnSubmit.disabled = false;
+        btnSubmit.textContent = 'Iniciar Sesión';
+        return;
+    }
 
     btnSubmit.disabled = true;
     btnSubmit.textContent = 'Validando...';
@@ -65,10 +79,24 @@ async function manejarLogin(e, destino) {
 async function manejarLoginEstudiante(e, destino) {
     e.preventDefault();
     const form = e.target;
-    const user = form.querySelector('input[type="text"]').value.trim();
-    const pass = form.querySelector('input[type="password"]').value.trim();
+    
+    const user = form.querySelector('input[name="username"]').value.trim();
+    const passInput = form.querySelector('#pass-estudiante');
+    const pass = passInput ? passInput.value.trim() : '';
+    
     const btnSubmit = form.querySelector('.btn-submit');
     const errorBox = form.querySelector('.login-error');
+
+    // Validación
+    if (!user || !pass) {
+        if (errorBox) {
+            errorBox.textContent = '⚠️ Completa número de control y contraseña.';
+            errorBox.classList.remove('hidden');
+        }
+        btnSubmit.disabled = false;
+        btnSubmit.textContent = 'Ingresar al Portal';
+        return;
+    }
 
     btnSubmit.disabled = true;
     btnSubmit.textContent = 'Validando...';
@@ -172,4 +200,26 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     }
+});
+
+
+// VISIBILIDAD DE CONTRASEÑAS GLOBALES
+document.addEventListener("DOMContentLoaded", () => {
+    const togglePasswordBtns = document.querySelectorAll('.btn-toggle-password');
+
+    togglePasswordBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const input = this.previousElementSibling;
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                this.textContent = '🔒';
+                this.title = 'Ocultar contraseña';
+            } else {
+                input.type = 'password';
+                this.textContent = '👁️';
+                this.title = 'Mostrar contraseña';
+            }
+        });
+    });
 });

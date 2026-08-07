@@ -523,12 +523,14 @@ async function cargarTablaEstudiantes(pagina = 1) {
     paginaActual = pagina;
     const buscador = document.getElementById('buscadorAlumnos');
     const textoBusqueda = buscador ? buscador.value.trim() : '';
+    const filtroPrograma = document.getElementById('filtroProgramaAlumnos') ? document.getElementById('filtroProgramaAlumnos').value : 'todos';
+    const filtroFase = document.getElementById('filtroFaseAlumnos') ? document.getElementById('filtroFaseAlumnos').value : 'todos';
 
     const tbody = document.getElementById('tablaEstudiantesBody');
     if(tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px; color: #6b7280; font-style: italic;">Cargando directorio...</td></tr>';
 
     try {
-        const url = `${API_BASE}/estudiantes?page=${paginaActual}&search=${encodeURIComponent(textoBusqueda)}`;
+        const url = `${API_BASE}/estudiantes?page=${paginaActual}&search=${encodeURIComponent(textoBusqueda)}&programa=${encodeURIComponent(filtroPrograma)}&fase=${encodeURIComponent(filtroFase)}`;
         const response = await apiFetch(url, { cache: 'no-store' });
         
         if (response.status === 401) return;
@@ -589,13 +591,18 @@ document.addEventListener("DOMContentLoaded", () => {
     const buscador = document.getElementById('buscadorAlumnos');
     if (buscador) {
         buscador.addEventListener('input', () => { 
-            // Retraso para no saturar al servidor al escribir rápido
             clearTimeout(timeoutBusquedaDirectorio);
             timeoutBusquedaDirectorio = setTimeout(() => {
                 cargarTablaEstudiantes(1); 
             }, 400); 
         });
     }
+
+    const filtroProg = document.getElementById('filtroProgramaAlumnos');
+    if (filtroProg) filtroProg.addEventListener('change', () => cargarTablaEstudiantes(1));
+    
+    const filtroFase = document.getElementById('filtroFaseAlumnos');
+    if (filtroFase) filtroFase.addEventListener('change', () => cargarTablaEstudiantes(1));
     
     const btnAnt = document.getElementById('btnPaginaAnt');
     if (btnAnt) btnAnt.addEventListener('click', () => { 
@@ -618,6 +625,7 @@ window.abrirDetallesEstudiante = function(id_estudiante) {
 
     document.getElementById('detalles-nombre').textContent = estudianteSeleccionado.nombre;
     document.getElementById('detalles-control').textContent = "Control: " + estudianteSeleccionado.usuarioAlumno;
+    document.getElementById('detalles-programa').textContent = "Programa: " + estudianteSeleccionado.programa;
 
     const semsActivos = estudianteSeleccionado.seminarios.filter(s => !s.es_evaluado);
     const contenedorActivos = document.getElementById('contenedor-seminarios-activos');
@@ -1149,6 +1157,22 @@ if (btnGuardarEditarDocente) {
             return;
         }
 
+        // Validar contraseña si se proporcionó
+        if (password && password.length < 8) {
+            msgEditarDocente.style.color = 'red';
+            msgEditarDocente.textContent = '⚠️ La contraseña debe tener al menos 8 caracteres.';
+            return;
+        }
+
+        // Confirmación antes de guardar
+        let mensajeConfirmacion = `¿Estás seguro de editar al docente "${nombre_completo}"?`;
+        if (password) {
+            mensajeConfirmacion += `\n\nSe actualizará la contraseña.`;
+        }
+        if (!confirm(`⚠️ ${mensajeConfirmacion}`)) {
+            return;
+        }
+
         btnGuardarEditarDocente.disabled = true;
         try {
             const res = await apiFetch(`${API_BASE}/editar-docente/${id}`, {
@@ -1172,6 +1196,103 @@ if (btnGuardarEditarDocente) {
             msgEditarDocente.textContent = '⚠️ Error de conexión con el servidor.';
         } finally {
             btnGuardarEditarDocente.disabled = false;
+        }
+    });
+}
+
+
+
+// LÓGICA PARA EDITAR PERFIL DEL ADMINISTRADOR
+const btnEditarMiPerfilAdmin = document.getElementById('btnEditarMiPerfilAdmin');
+const modalEditarAdmin = document.getElementById('modalEditarAdmin');
+const btnCerrarEditarAdmin = document.getElementById('btnCerrarEditarAdmin');
+const btnGuardarEditarAdmin = document.getElementById('btnGuardarEditarAdmin');
+const msgEditarAdmin = document.getElementById('msgEditarAdmin');
+
+if (btnEditarMiPerfilAdmin) {
+    btnEditarMiPerfilAdmin.addEventListener('click', () => {
+        document.getElementById('editAdminUsuario').value = ''; 
+        document.getElementById('editAdminPass').value = '';
+        msgEditarAdmin.textContent = '';
+        modalEditarAdmin.classList.remove('hidden');
+    });
+}
+
+if (btnCerrarEditarAdmin) {
+    btnCerrarEditarAdmin.addEventListener('click', () => modalEditarAdmin.classList.add('hidden'));
+}
+
+if (modalEditarAdmin) {
+    modalEditarAdmin.addEventListener('click', (e) => {
+        if (e.target === modalEditarAdmin) modalEditarAdmin.classList.add('hidden');
+    });
+}
+
+if (btnGuardarEditarAdmin) {
+    btnGuardarEditarAdmin.addEventListener('click', async () => {
+        const usuario = document.getElementById('editAdminUsuario').value.trim();
+        const password = document.getElementById('editAdminPass').value.trim();
+
+        // Validamos que al menos intente cambiar uno de los dos datos
+        if (!usuario && !password) {
+            msgEditarAdmin.style.color = 'red';
+            msgEditarAdmin.textContent = '⚠️ Escribe al menos un dato para actualizar.';
+            return;
+        }
+
+        // Validar contraseña si se proporcionó
+        if (password && password.length < 8) {
+            msgEditarAdmin.style.color = 'red';
+            msgEditarAdmin.textContent = '⚠️ La contraseña debe tener al menos 8 caracteres.';
+            return;
+        }
+
+        // Confirmación antes de guardar
+        let mensajeConfirmacion = '¿Estás seguro de actualizar tus datos de administrador?';
+        if (usuario && password) {
+            mensajeConfirmacion += '\n\nSe actualizarán tanto el usuario como la contraseña.';
+        } else if (usuario) {
+            mensajeConfirmacion += '\n\nSe actualizará el usuario.';
+        } else if (password) {
+            mensajeConfirmacion += '\n\nSe actualizará la contraseña.';
+        }
+        
+        if (!confirm(`⚠️ ${mensajeConfirmacion}`)) {
+            return;
+        }
+
+        btnGuardarEditarAdmin.disabled = true;
+        btnGuardarEditarAdmin.textContent = "Guardando...";
+
+        try {
+            const res = await apiFetch(`${API_BASE}/editar-perfil-admin`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ usuario, password })
+            });
+            
+            if (res.status === 401) return;
+            const data = await res.json();
+            
+            if (data.success) {
+                msgEditarAdmin.style.color = 'green';
+                msgEditarAdmin.textContent = '✅ ' + data.mensaje;
+                
+                setTimeout(() => {
+                    modalEditarAdmin.classList.add('hidden');
+                    alert("Tus datos han sido actualizados. Por seguridad, deberás iniciar sesión nuevamente con tus credenciales.");
+                    window.location.href = '/logout';
+                }, 1500);
+            } else {
+                msgEditarAdmin.style.color = 'red';
+                msgEditarAdmin.textContent = '❌ ' + (data.mensaje || 'No fue posible guardar.');
+            }
+        } catch (error) {
+            msgEditarAdmin.style.color = 'red';
+            msgEditarAdmin.textContent = '⚠️ Error de conexión con el servidor.';
+        } finally {
+            btnGuardarEditarAdmin.disabled = false;
+            btnGuardarEditarAdmin.textContent = "Guardar cambios";
         }
     });
 }
@@ -1396,6 +1517,18 @@ if (btnCrearDocente) {
             return;
         }
 
+        // Validar longitud de contraseña
+        if (password.length < 8) {
+            msgRegistro.style.color = "red";
+            msgRegistro.textContent = "⚠️ La contraseña debe tener al menos 8 caracteres.";
+            return;
+        }
+
+        // Confirmación antes de guardar
+        if (!confirm(`⚠️ ¿Estás seguro de registrar al docente "${nombre}" con el usuario "${usuario}"?`)) {
+            return;
+        }
+
         btnCrearDocente.disabled = true;
         btnCrearDocente.textContent = "Registrando...";
 
@@ -1423,10 +1556,11 @@ if (btnCrearDocente) {
             msgRegistro.style.color = "red";
             msgRegistro.textContent = "⚠️ Error de conexión con el servidor.";
         } finally {
-            btnCrearDocente.disabled = false;
-            btnCrearDocente.textContent = "Registrar Docente";
+                    btnCrearDocente.disabled = false;
+                    btnCrearDocente.textContent = "Registrar Docente";
+                }
+            });
         }
-    });
 
     // --- LÓGICA DE LA AGENDA (CALENDARIO) ---
     const vistaAgenda = document.getElementById('vista-agenda');
@@ -1466,6 +1600,16 @@ if (btnCrearDocente) {
     if (filtroAnioAgenda) {
         filtroAnioAgenda.addEventListener('change', () => cargarAgendaBackend(1, false));
     }
+    
+    const filtroProgramaAgenda = document.getElementById('filtroProgramaAgenda');
+    if (filtroProgramaAgenda) {
+        filtroProgramaAgenda.addEventListener('change', () => cargarAgendaBackend(1, false));
+    }
+    
+    const filtroFaseAgenda = document.getElementById('filtroFaseAgenda');
+    if (filtroFaseAgenda) {
+        filtroFaseAgenda.addEventListener('change', () => cargarAgendaBackend(1, false));
+    }
 
     let paginaAgendaActual = 1;
     let cargandoAgenda = false;
@@ -1481,6 +1625,8 @@ if (btnCrearDocente) {
 
         const mesFiltro = filtroMesAgenda ? filtroMesAgenda.value : 'todos';
         const anioFiltro = filtroAnioAgenda ? filtroAnioAgenda.value : 'todos';
+        const programaFiltro = document.getElementById('filtroProgramaAgenda') ? document.getElementById('filtroProgramaAgenda').value : 'todos';
+        const faseFiltro = document.getElementById('filtroFaseAgenda') ? document.getElementById('filtroFaseAgenda').value : 'todos';
 
         if (!esCargarMas) {
             contenedor.innerHTML = '';
@@ -1494,7 +1640,7 @@ if (btnCrearDocente) {
         contenedor.innerHTML += `<div id="${idCarga}" style="text-align: center; color: #6b7280; padding: 20px; font-style: italic;">Consultando agenda...</div>`;
 
         try {
-            const url = `${API_BASE}/agenda-paginada?mes=${mesFiltro}&anio=${anioFiltro}&page=${page}`;
+            const url = `${API_BASE}/agenda-paginada?mes=${mesFiltro}&anio=${anioFiltro}&programa=${encodeURIComponent(programaFiltro)}&fase=${encodeURIComponent(faseFiltro)}&page=${page}`;
             const response = await apiFetch(url, { cache: 'no-store' });
             
             document.getElementById(idCarga)?.remove();
@@ -1610,6 +1756,56 @@ if (btnCrearDocente) {
         document.getElementById('modalDetallesAgenda').classList.remove('hidden');
     }
 
+    
+function actualizarFiltrosFaseDinamicos(idSelectPrograma, idSelectFase) {
+    const selectPrograma = document.getElementById(idSelectPrograma);
+    const selectFase = document.getElementById(idSelectFase);
+    
+    if (!selectPrograma || !selectFase) return;
+
+    const fasesMaestria = ["1.- Prototipo", "2.- Tutorial", "3.- Culminacion"];
+    const fasesDoctorado = ["1.- Prototipo", "2.- Tutorial", "3.- Avance 1", "4.- Predoctoral", "5.- Tutorial", "6.- Avance 2", "7.- Tutorial", "8.- Culminacion"];
+
+    function renderizarOpciones() {
+        const programa = selectPrograma.value;
+        const valorActual = selectFase.value; 
+
+        selectFase.innerHTML = '<option value="todos">Todas las fases</option>';
+
+        if (programa === 'todos') {
+            const optgroupM = document.createElement('optgroup');
+            optgroupM.label = "Fases de Maestría";
+            fasesMaestria.forEach(f => optgroupM.innerHTML += `<option value="${f}">${f}</option>`);
+            
+            const optgroupD = document.createElement('optgroup');
+            optgroupD.label = "Fases de Doctorado";
+            fasesDoctorado.forEach(f => optgroupD.innerHTML += `<option value="${f}">${f}</option>`);
+
+            selectFase.appendChild(optgroupM);
+            selectFase.appendChild(optgroupD);
+        } else if (programa === 'Maestría') {
+            fasesMaestria.forEach(f => selectFase.innerHTML += `<option value="${f}">${f}</option>`);
+        } else if (programa === 'Doctorado') {
+            fasesDoctorado.forEach(f => selectFase.innerHTML += `<option value="${f}">${f}</option>`);
+        }
+
+        if (Array.from(selectFase.options).some(opt => opt.value === valorActual)) {
+            selectFase.value = valorActual;
+        } else {
+            selectFase.value = 'todos'; 
+        }
+    }
+
+    renderizarOpciones();
+
+    selectPrograma.addEventListener('change', renderizarOpciones);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    actualizarFiltrosFaseDinamicos('filtroProgramaAlumnos', 'filtroFaseAlumnos');
+    actualizarFiltrosFaseDinamicos('filtroProgramaAgenda', 'filtroFaseAgenda');
+});
+
 
     // ---- DESCARGAS DE EXCEL en: ".XLSX" ---
 
@@ -1644,7 +1840,9 @@ if (btnCrearDocente) {
     const btnDescargarReporte = document.getElementById('btnDescargarReporte');
     if (btnDescargarReporte) {
         btnDescargarReporte.addEventListener('click', () => {
-            descargarExcel(`${API_BASE}/descargar-reporte`, 'Directorio_Alumnos.xlsx', btnDescargarReporte);
+            const prog = document.getElementById('filtroProgramaAlumnos') ? document.getElementById('filtroProgramaAlumnos').value : 'todos';
+            const fase = document.getElementById('filtroFaseAlumnos') ? document.getElementById('filtroFaseAlumnos').value : 'todos';
+            descargarExcel(`${API_BASE}/descargar-reporte?programa=${encodeURIComponent(prog)}&fase=${encodeURIComponent(fase)}`, 'Directorio_Alumnos.xlsx', btnDescargarReporte);
         });
     }
 
@@ -1654,7 +1852,10 @@ if (btnCrearDocente) {
         btnDescargarAgenda.addEventListener('click', () => {
             const mes = document.getElementById('filtroMesAgenda').value;
             const anio = document.getElementById('filtroAnioAgenda').value;
-            descargarExcel(`${API_BASE}/descargar-agenda?mes=${mes}&anio=${anio}`, `Agenda_Seminarios_${mes}_${anio}.xlsx`, btnDescargarAgenda);
+            const prog = document.getElementById('filtroProgramaAgenda') ? document.getElementById('filtroProgramaAgenda').value : 'todos';
+            const fase = document.getElementById('filtroFaseAgenda') ? document.getElementById('filtroFaseAgenda').value : 'todos';
+            
+            descargarExcel(`${API_BASE}/descargar-agenda?mes=${mes}&anio=${anio}&programa=${encodeURIComponent(prog)}&fase=${encodeURIComponent(fase)}`, `Agenda_Seminarios_${mes}_${anio}.xlsx`, btnDescargarAgenda);
         });
     }
 
@@ -1665,4 +1866,43 @@ if (btnCrearDocente) {
             descargarExcel(`${API_BASE}/descargar-docentes`, 'Directorio_Docentes.xlsx', btnDescargarDocentes);
         });
     }
+
+// VISIBILIDAD DE CONTRASEÑAS GLOBALES
+document.addEventListener("DOMContentLoaded", () => {
+    const togglePasswordBtns = document.querySelectorAll('.btn-toggle-password');
+
+    togglePasswordBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const input = this.previousElementSibling;
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                this.textContent = '🔒';
+                this.title = 'Ocultar contraseña';
+            } else {
+                input.type = 'password';
+                this.textContent = '👁️';
+                this.title = 'Mostrar contraseña';
+            }
+        });
+    });
+});
+
+// Función de validación de contraseña
+function validarContraseña(password) {
+    if (!password || password.length === 0) {
+        return { valida: true, mensaje: '' };
+    }
+    if (password.length < 8) {
+        return { 
+            valida: false, 
+            mensaje: '⚠️ La contraseña debe tener al menos 8 caracteres.' 
+        };
+    }
+    return { valida: true, mensaje: '' };
+}
+
+// Función para mostrar alerta de confirmación
+function mostrarAlertaConfirmacion(mensaje) {
+    return confirm(`⚠️ ${mensaje}\n\n¿Estás seguro de realizar estos cambios?`);
 }

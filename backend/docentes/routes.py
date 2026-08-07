@@ -125,3 +125,35 @@ def eliminar_docente(id_docente):
         return jsonify({"success": True, "mensaje": "Docente eliminado."})
     finally:
         session.close()
+
+
+@docentes_bp.route("/editar-perfil-admin", methods=["PUT"])
+@admin_requerido
+@csrf_protegido
+@validar_json
+def editar_perfil_admin():
+    session = Session()
+    try:
+        admin = session.query(UsuarioEvaluador).filter_by(usuario=request.usuario_actual).first()
+        if not admin:
+            return jsonify({"success": False, "mensaje": "Administrador no encontrado"}), 404
+
+        data = request.get_json() or {}
+        usuario_nuevo = data.get("usuario", "").strip()
+        password_nueva = data.get("password", "").strip()
+
+        if not usuario_nuevo and not password_nueva:
+            return jsonify({"success": False, "mensaje": "No se enviaron datos para actualizar"}), 400
+
+        if usuario_nuevo:
+            if usuario_nuevo != admin.usuario and session.query(UsuarioEvaluador).filter_by(usuario=usuario_nuevo).first():
+                return jsonify({"success": False, "mensaje": "Ese usuario ya está ocupado"}), 400
+            admin.usuario = usuario_nuevo
+
+        if password_nueva:
+            admin.password_hash = generate_password_hash(password_nueva, method="pbkdf2:sha256", salt_length=16)
+
+        session.commit()
+        return jsonify({"success": True, "mensaje": "Tus datos han sido actualizados."})
+    finally:
+        session.close()

@@ -41,7 +41,10 @@
 
             <div class="input-group">
               <label for="pass-profesor">Contraseña</label>
-              <input type="password" id="pass-profesor" name="password" placeholder="••••••••" required />
+              <div class="password-container">
+                <input type="password" id="pass-profesor" name="password" placeholder="••••••••" required />
+                <button type="button" class="btn-toggle-password" tabindex="-1" title="Mostrar contraseña">👁️</button>
+              </div>
             </div>
 
             <button type="submit" class="btn-submit">Iniciar sesión</button>
@@ -63,7 +66,10 @@
 
               <div class="input-group">
                 <label for="pass-estudiante">Contraseña</label>
-                <input type="password" id="pass-estudiante" name="password" placeholder="••••••••" required />
+                <div class="password-container">
+                  <input type="password" id="pass-estudiante" name="password" placeholder="••••••••" required />
+                  <button type="button" class="btn-toggle-password" tabindex="-1" title="Mostrar contraseña">👁️</button>
+                </div>
               </div>
 
               <button type="submit" class="btn-submit">Ingresar al portal</button>

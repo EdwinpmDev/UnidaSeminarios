@@ -65,6 +65,8 @@ def descargar_reporte():
 def descargar_agenda():
     mes_filtro = request.args.get('mes', 'todos')
     anio_filtro = request.args.get('anio', 'todos')
+    programa_filtro = request.args.get('programa', 'todos').strip()
+    fase_filtro = request.args.get('fase', 'todos').strip()
 
     session = Session()
     try:
@@ -73,18 +75,21 @@ def descargar_agenda():
         ws.title = "Agenda filtrada"
         ws.append(['Fecha', 'Hora', 'Lugar', 'Modalidad', 'Estudiante', 'No. Control', 'Tipo de seminario', 'Proyecto'])
 
-        seminarios = session.query(Seminario).order_by(Seminario.fecha.asc(), Seminario.hora.asc()).all()
+        query = session.query(Seminario).join(Estudiante)
+
+        if anio_filtro != 'todos':
+            query = query.filter(extract('year', Seminario.fecha) == int(anio_filtro))
+        if mes_filtro != 'todos':
+            query = query.filter(extract('month', Seminario.fecha) == int(mes_filtro))
+        if programa_filtro != 'todos':
+            query = query.filter(Estudiante.programa == programa_filtro)
+        if fase_filtro != 'todos':
+            query = query.filter(Seminario.tipo_seminario == fase_filtro)
+
+        seminarios = query.order_by(Seminario.fecha.asc(), Seminario.hora.asc()).all()
 
         for s in seminarios:
             if not s.fecha:
-                continue
-
-            s_mes = f"{s.fecha.month:02d}"
-            s_anio = str(s.fecha.year)
-
-            if mes_filtro != 'todos' and s_mes != mes_filtro:
-                continue
-            if anio_filtro != 'todos' and s_anio != anio_filtro:
                 continue
 
             hora_str = s.hora.strftime('%H:%M') if s.hora else 'Sin hora'
@@ -111,6 +116,8 @@ def agenda_paginada():
     try:
         mes_filtro = request.args.get('mes', 'todos')
         anio_filtro = request.args.get('anio', 'todos')
+        programa_filtro = request.args.get('programa', 'todos').strip()
+        fase_filtro = request.args.get('fase', 'todos').strip()
         page = int(request.args.get('page', 1))
         per_page = 15
 
@@ -120,7 +127,11 @@ def agenda_paginada():
             query = query.filter(extract('year', Seminario.fecha) == int(anio_filtro))
         if mes_filtro != 'todos':
             query = query.filter(extract('month', Seminario.fecha) == int(mes_filtro))
-
+        if programa_filtro != 'todos':
+            query = query.filter(Estudiante.programa == programa_filtro)
+        if fase_filtro != 'todos':
+            query = query.filter(Seminario.tipo_seminario == fase_filtro)
+            
         total_records = query.count()
         has_more = (page * per_page) < total_records
 
