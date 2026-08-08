@@ -1,683 +1,915 @@
-<!DOCTYPE html>
-<html lang="es">
+<file path="frontend/usuario.html">
+    <!DOCTYPE html>
+    <html lang="es">
 
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Registro de seminario</title>
-  <link rel="stylesheet" href="./css/usuario.css">
-</head>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Registro de seminario</title>
+        <link rel="stylesheet" href="./css/usuario.css">
+    </head>
 
-<body>
-  <!-- OVERLAY DE LOGIN -->
-  <div id="loginOverlay" class="hidden" aria-modal="true" role="dialog" aria-labelledby="loginTitle">
-    <div id="loginBox">
-      <h2 id="loginTitle">Iniciar sesión</h2>
-      <div class="grid">
-        <div>
-          <label for="loginUser">Usuario o correo</label>
-          <input type="email" id="loginUser" placeholder="usuario@dominio" autocomplete="username">
-        </div>
-        <div>
-          <label for="loginPass">Contraseña</label>
-          <div class="password-container">
-            <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
-            <button type="button" class="btn-toggle-password" tabindex="-1" title="Mostrar contraseña">👁️</button>
-          </div>
-        </div>
-      </div>
-      <div id="loginError" class="hidden" style="color: var(--error); font-size: 0.9rem; margin-top: 8px;"></div>
-      <div class="row-actions" style="margin-top:10px;">
-        <button id="btnDoLogin" type="button">Entrar</button>
-      </div>
-    </div>
-  </div>
-
-  <header>
-    <div class="brand-left">
-      <img src="./assets/img/tecnmBlanco.png" alt="Logo TecNM">
-    </div>
-    <div class="brand-center">
-      <img src="./assets/img/itv.png" alt="itv logo">
-    </div>
-    <h1>Registro de seminario</h1>
-    <p>Captura paso a paso los datos del estudiante y su evaluación</p>
-  </header>
-
-  <main class="container">
-
-    <!-- PANTALLA 1: FORMULARIOS DE REGISTRO Y ADMIN -->
-    <div id="vista-formulario">
-        
-        <div style="display: flex; gap: 10px; justify-content: flex-end; margin-bottom: 15px;">
-            <button type="button" id="btnVerAgenda" style="background: #2563eb; padding: 10px 15px; border-radius: 6px; color: white; border: none; font-weight: bold; cursor: pointer;">Ver agenda 📅</button>
-            <button type="button" id="btnVerDirectorio" style="background: #4b5563; padding: 10px 15px; border-radius: 6px; color: white; border: none; font-weight: bold; cursor: pointer;">Ver directorio alumnos📋</button>
-        </div>
-
-        <section class="card">
-            <div class="steps" aria-hidden="true">
-                <div class="step step-1 active">Paso 1: Datos básicos</div>
-                <div class="step step-2">Paso 2: Seminario</div>
-            </div>
-
-            <form id="formSeminario" novalidate>
-              
-              <!-- PASO 1 -->
-              <fieldset id="fsPaso1">
-                <legend>1) Datos básicos del estudiante</legend>
-                <!-- botón para seleccionar alumno existente -->
-                <div style="background: #eff6ff; padding: 12px; border-radius: 8px; border: 1px dashed var(--primary); margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between;">
-                    <span style="font-size: 0.95rem; color: var(--primary-dark); font-weight: bold;">¿El alumno ya existe en el sistema?</span>
-                    <div style="display: flex; gap: 8px;">
-                        <button type="button" id="btnAbrirSeleccion" style="background: #16a34a; padding: 8px 12px; font-size: 0.85rem; color: white; border: none; border-radius: 6px; cursor: pointer;">Seleccionar alumno</button>
-                        <button type="button" id="btnBorrarSeleccion" class="hidden" style="background: #f97316; padding: 8px 12px; font-size: 0.85rem; color: white; border: none; border-radius: 6px; cursor: pointer;">Borrar selección</button>
-                    </div>
-                </div>
+    <body>
+        <!-- OVERLAY DE LOGIN -->
+        <div id="loginOverlay" class="hidden" aria-modal="true" role="dialog" aria-labelledby="loginTitle">
+            <div id="loginBox">
+                <h2 id="loginTitle">Iniciar sesión</h2>
                 <div class="grid">
-                  <div>
-                    <label for="usuarioAlumno">Nombre de usuario</label>
-                    <input type="text" id="usuarioAlumno" placeholder="Ej. A123" pattern="[A-Za-z0-9]{4,}" title="Mínimo 4 caracteres, letras y/o números sin espacios" required />
-                  </div>
                     <div>
-                    <label for="password_estudiante" id="lbl_pass_est">Contraseña (AñoMesDía)</label>
-                    <input type="text" id="password_estudiante" placeholder="Ej. Pass123" pattern="[A-Za-z0-9]{4,}" title="Mínimo 4 caracteres alfanuméricos" required />
-                  </div>
-                  <div>
-                    <label for="nombre">Nombre completo</label>
-                    <input type="text" id="nombre" pattern="[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+" title="Solo letras y espacios" placeholder="Ej. Juan Pérez" required />
-                  </div>
-                  <div>
-                    <label for="correo">Correo (Opcional)</label>
-                    <input type="email" id="correo" placeholder="ejemplo@dominio.com" />
-                  </div>
-                  <div>
-                    <label for="programa">Programa</label>
-                    <select id="programa" required>
-                      <option value="" selected disabled>Selecciona...</option>
-                      <option value="Maestría">Maestría</option>
-                      <option value="Doctorado">Doctorado</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label for="titulo">Título del proyecto</label>
-                    <input type="text" id="titulo" required />
-                  </div>
-                </div>
-                <div class="row-actions">
-                  <button type="button" id="btnSiguientePaso">Siguiente ➔</button>
-                </div>
-              </fieldset>
-
-              <!-- PASO 2 -->
-              <fieldset id="fsPaso2" class="hidden">
-                <legend>2) Información del seminario</legend>
-                <div class="grid">
-
-                  <div style="background: #eff6ff; padding: 10px; border-radius: 8px; border: 1px dashed var(--primary); grid-column: 1 / -1;">
-                      <label for="clave_acceso" style="color: var(--primary-dark); font-weight: bold;">Clave de acceso (Editable)</label>
-                      <div style="display:flex; gap:5px;">
-                        <input type="text" id="clave_acceso" required placeholder="Generar o escribir clave..." style="font-family: monospace; font-size: 1.1rem; text-align: center;" />
-                        <button type="button" id="btnGenerarClave" style="padding: 10px; flex-shrink: 0; background: var(--accent); color: var(--primary-dark);" title="Generar clave">🎲</button>
-                        <button type="button" id="btnLimpiarClave" style="padding: 10px; flex-shrink: 0; background: var(--error); color: white;" title="Vaciar campo">🗑️</button>
-                      </div>
-                  </div>
-
-                  <div>
-                    <label for="tipo_seminario">Seminario</label>
-                    <select id="tipo_seminario" required>
-                        <option value="" selected disabled>Selecciona un programa primero</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label for="modalidad">Modalidad</label>
-                    <select id="modalidad" required>
-                      <option value="Presencial">Presencial</option>
-                      <option value="Virtual">Virtual</option>
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label for="lugar_select">Aula / Modalidad del lugar</label>
-                    <select id="lugar_select" required>
-                      <option value="" selected disabled>Selecciona...</option>
-                      <option value="Raúl Limón">Aula Raúl Limón</option>
-                      <option value="Fermín Carrillo">Aula Fermín Carrillo</option>
-                      <option value="Virtual">Virtual (Google Meet / Zoom)</option>
-                      <option value="Personalizado">Personalizado (escribir aula)</option>
-                    </select>
-                    <input type="text" id="lugar_virtual" class="hidden" style="margin-top:6px;" placeholder="Pega el enlace de Meet, Zoom, etc." />
-                    <input type="text" id="lugar_personalizado" class="hidden" style="margin-top:6px;" placeholder="Escribe el aula específica" />
-                  </div>
-                  <div>
-                    <label for="duracion_select">Duración</label>
-                    <select id="duracion_select" required>
-                      <option value="" selected disabled>Selecciona...</option>
-                      <option value="30 min">30 min</option>
-                      <option value="40 min">40 min</option>
-                      <option value="60 min">60 min</option>
-                      <option value="Personalizado">Personalizado</option>
-                    </select>
-                    <input type="text" id="duracion_personalizada" class="hidden" style="margin-top:6px;" placeholder="Ej. 45 min, 90 min..." />
-                  </div>
-
-                  <div>
-                    <label for="fecha">Fecha</label>
-                    <input type="date" id="fecha" required>
-                  </div>
-                  <div>
-                    <label for="hora">Hora</label>
-                    <input type="time" id="hora" required>
-                  </div>
-                  
-                  <div>
-                    <label for="presidente">Presidente del jurado (Opcional)</label>
-                    <input type="text" id="presidente" />
-                  </div>
-                  <div>
-                    <label for="secretario">Secretario (Opcional)</label>
-                    <input type="text" id="secretario" />
-                  </div>
-                  <div>
-                    <label for="vocal">Vocal (Opcional)</label>
-                    <input type="text" id="vocal" />
-                  </div>
-                  
-                  <div>
-                    <label for="observaciones">Observaciones (Opcional)</label>
-                    <input type="text" id="observaciones" />
-                  </div>
-                </div>
-                
-                <div class="row-actions">
-                  <button type="button" id="btnRegresarPaso" style="background: #6b7280;">🡄 Regresar</button>
-                  <button type="submit" id="btnGuardarFinal">Agendar y guardar</button>
-                </div>
-              </fieldset>
-            </form>
-
-        <div id="panelAdmin" class="card hidden" style="margin-bottom: 20px; border-top: 4px solid var(--primary); margin-top: 20px;">
-          <h2 style="color: var(--primary); margin-top: 0;">🛠️ Panel de administración</h2>
-          <p>Registrar un nuevo profesor o evaluador en el sistema.</p>
-
-          <div class="grid" style="margin-top: 15px;">
-            <div>
-              <label for="nuevoDocenteNombre">Nombre completo</label>
-              <input type="text" id="nuevoDocenteNombre" placeholder="Ej. Dra. María López">
-            </div>
-            <div>
-              <label for="nuevoDocenteUsuario">Usuario (Para iniciar sesión)</label>
-              <input type="text" id="nuevoDocenteUsuario" placeholder="mlopez">
-            </div>
-
-            <div>
-            <label for="nuevoDocentePass">Contraseña (min 8 caracteres/numeros)</label>
-            <div class="password-container">
-                <input type="password" id="nuevoDocentePass" placeholder="••••••••">
-                <button type="button" class="btn-toggle-password" tabindex="-1" title="Mostrar contraseña">👁️</button>
-            </div>
-            <small style="color: #6b7280; font-size: 0.8rem;">La contraseña debe tener al menos 8 caracteres</small>
-            </div>
-            </div>
-
-          <div id="msgRegistroDocente" style="margin-top: 10px; font-weight: bold;"></div>
-          <div class="row-actions" style="margin-top: 10px; justify-content: space-between;">
-            <button type="button" id="btnVerDocentes" style="background: #4b5563;">Ver directorio de docentes 👩‍🏫</button>
-            <button type="button" id="btnCrearDocente">Registrar docente</button>
-
-            <button type="button" id="btnEditarMiPerfilAdmin" style="background: #d97706;">Mis datos de Admin ⚙️</button>
-          </div>
-        </div>
-        
-    </div>
-
-<!-- PANTALLA 2: DIRECTORIO DE ALUMNOS -->
-    <div id="vista-directorio" class="hidden">
-        <section class="card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h3 style="margin: 0; color: var(--primary);">Directorio de estudiantes</h3>
-                <button type="button" id="btnVolverRegistro" style="background: #4b5563; padding: 10px 15px; border-radius: 6px; color: white; border: none; font-weight: bold; cursor: pointer;">🡄 Volver al registro</button>
-            </div>
-
-            <!-- BARRA DE BÚSQUEDA -->
-            <div style="display: flex; gap: 10px; margin-bottom: 15px; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid var(--border); align-items: flex-end; flex-wrap: wrap;">
-                <div style="flex: 1; min-width: 200px;">
-                    <label for="buscadorAlumnos" style="font-size: 0.85rem; font-weight: bold; color: var(--primary-dark);">Buscar alumno</label>
-                    <input type="text" id="buscadorAlumnos" placeholder="🔍 Nombre o control..." style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border); font-size: 1rem;">
-                </div>
-                <div style="flex: 1; min-width: 150px;">
-                    <label for="filtroProgramaAlumnos" style="font-size: 0.85rem; font-weight: bold; color: var(--primary-dark);">Programa</label>
-                    <select id="filtroProgramaAlumnos" style="padding: 8px; border-radius: 6px; border: 1px solid var(--border); width: 100%;">
-                        <option value="todos" selected>Todos los programas</option>
-                        <option value="Maestría">Maestría</option>
-                        <option value="Doctorado">Doctorado</option>
-                    </select>
-                </div>
-                <div style="flex: 1; min-width: 150px;">
-                    <label for="filtroFaseAlumnos" style="font-size: 0.85rem; font-weight: bold; color: var(--primary-dark);">Fase de seminario</label>
-                    <select id="filtroFaseAlumnos" style="padding: 8px; border-radius: 6px; border: 1px solid var(--border); width: 100%;">
-                        <option value="todos" selected>Todas las fases</option>
-                        <option value="1.- Prototipo">1.- Prototipo</option>
-                        <option value="2.- Tutorial">2.- Tutorial</option>
-                        <option value="3.- Avance 1">3.- Avance 1</option>
-                        <option value="3.- Culminacion">3.- Culminacion</option>
-                        <option value="4.- Predoctoral">4.- Predoctoral</option>
-                        <option value="5.- Tutorial">5.- Tutorial</option>
-                        <option value="6.- Avance 2">6.- Avance 2</option>
-                        <option value="7.- Tutorial">7.- Tutorial</option>
-                        <option value="8.- Culminacion">8.- Culminacion</option>
-                    </select>
-                </div>
-                <div>
-                    <button type="button" id="btnDescargarReporte" style="background: #16a34a; padding: 10px 15px; border-radius: 6px; color: white; border: none; font-weight: bold; cursor: pointer; white-space: nowrap;">Descargar Excel 📥</button>
-                </div>
-            </div>
-
-            <div class="table-scroll-container">
-                <table style="width: 100%; text-align: left; border-collapse: collapse;">
-                    <thead>
-                        <tr style="border-bottom: 2px solid #ccc;">
-                            <th>Nombre</th>
-                            <th>Nombre de usuario</th>
-                            <th>Seminarios Activos</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tablaEstudiantesBody">
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- CONTROLES DE PAGINACIÓN -->
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding: 10px; background: #f8fafc; border-radius: 6px; border: 1px solid var(--border);">
-                <button type="button" id="btnPaginaAnt" style="background: #4b5563; padding: 8px 15px;">🡄 Anterior</button>
-                <span id="textoPaginacion" style="font-weight: bold; color: var(--primary-dark);">Página 1 de 1</span>
-                <button type="button" id="btnPaginaSig" style="background: #4b5563; padding: 8px 15px;">Siguiente 🡆</button>
-            </div>
-        </section>
-    </div>
-
-    <!-- NUEVA PANTALLA: DETALLES DE ESTUDIANTE -->
-    <div id="vista-detalles-estudiante" class="hidden">
-        <section class="card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h3 style="margin: 0; color: var(--primary);">Detalles de estudiante</h3>
-                <button type="button" id="btnVolverDirectorio" style="background: #4b5563; padding: 10px 15px; border-radius: 6px; color: white; border: none; font-weight: bold; cursor: pointer;">🡄 Volver al directorio</button>
-            </div>
-
-            <!-- Panel superior: Info del alumno y sus 3 botones -->
-            <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                <div>
-                    <h2 id="detalles-nombre" style="margin: 0; color: var(--primary-dark);">Nombre Alumno</h2>
-                    <p id="detalles-control" style="margin: 5px 0 0; color: #4b5563; font-weight: bold;">Control</p>
-                    <p id="detalles-programa" style="margin: 2px 0 0; color: #4b5563; font-weight: bold;">Programa</p>
-                </div>
-                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                    <button type="button" id="btnEditarSoloAlumno" style="background: #d97706; padding: 8px 15px; border-radius: 6px; color: white; border: none; font-weight: bold; cursor: pointer;">Editar Alumno</button>
-                    <button type="button" id="btnHistorialSeminarios" style="background: #2563eb; padding: 8px 15px; border-radius: 6px; color: white; border: none; font-weight: bold; cursor: pointer;">Registro (Historial)</button>
-                    <button type="button" id="btnEliminarAlumnoTotal" class="btn-danger" style="padding: 8px 15px; border-radius: 6px; color: white; border: none; font-weight: bold; cursor: pointer;">Eliminar Alumno</button>
-                </div>
-            </div>
-
-            <!-- Lista de seminarios activos -->
-            <h3 style="color: var(--primary); margin-bottom: 10px; border-bottom: 2px solid var(--accent); padding-bottom: 5px;">Seminarios Activos</h3>
-            <div id="contenedor-seminarios-activos"></div>
-        </section>
-    </div>
-
-    <!-- MODAL EDITAR SOLO ESTUDIANTE -->
-    <div id="modalEditarSoloEstudiante" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px;">
-        <div style="background: white; border-radius: 10px; max-width: 500px; width: 100%; padding: 25px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h3 style="margin: 0; color: var(--primary);">Editar datos del Alumno</h3>
-                <button type="button" id="btnCerrarEditarSoloEstudiante" style="background: #4b5563; color: white; border: none; border-radius: 6px; padding: 6px 12px; cursor: pointer;">✕</button>
-            </div>
-            <input type="hidden" id="editSoloEstudianteId" />
-            <div class="grid">
-                <div style="grid-column: 1 / -1;">
-                    <label for="edit_solo_usuarioAlumno">Número de control</label>
-                    <input type="text" id="edit_solo_usuarioAlumno" pattern="[A-Za-z0-9]{4,}" title="Mínimo 4 letras/numeros, sin espacios" required />
-                </div>
-                <div style="grid-column: 1 / -1;">
-                    <label for="edit_solo_nombre">Nombre completo</label>
-                <input type="text" id="edit_solo_nombre" pattern="[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+" title="Solo letras y espacios" required />
-                </div>
-                <div style="grid-column: 1 / -1;">
-                    <label for="edit_solo_correo">Correo</label>
-                    <input type="email" id="edit_solo_correo" />
-                </div>
-                <div style="grid-column: 1 / -1;" class="hidden">
-                    <label for="edit_solo_programa">Programa</label>
-                    <select id="edit_solo_programa" required>
-                        <option value="Maestría">Maestría</option>
-                        <option value="Doctorado">Doctorado</option>
-                    </select>
-                </div>
-
-                <div style="grid-column: 1 / -1;">
-                    <label for="edit_solo_password">Nueva contraseña (opcional)</label>
-                    <div class="password-container">
-                        <input type="text" id="edit_solo_password" pattern="[A-Za-z0-9]{4,}" title="Mínimo 4 caracteres alfanuméricos" placeholder="Dejar en blanco para no cambiarla" />
-                        <button type="button" class="btn-toggle-password" tabindex="-1" title="Mostrar contraseña">👁️</button>
+                        <label for="loginUser">Usuario o correo</label>
+                        <input type="email" id="loginUser" placeholder="usuario@dominio" autocomplete="username">
+                    </div>
+                    <div>
+                        <label for="loginPass">Contraseña</label>
+                        <div class="password-container">
+                            <input type="password" id="loginPass" placeholder="••••••••"
+                                autocomplete="current-password">
+                            <button type="button" class="btn-toggle-password" tabindex="-1"
+                                title="Mostrar contraseña">👁️</button>
+                        </div>
                     </div>
                 </div>
-
-            </div>
-            <div class="row-actions" style="margin-top: 15px;">
-                <button type="button" id="btnGuardarSoloEstudiante">Guardar cambios</button>
+                <div id="loginError" class="hidden" style="color: var(--error); font-size: 0.9rem; margin-top: 8px;">
+                </div>
+                <div class="row-actions" style="margin-top:10px;">
+                    <button id="btnDoLogin" type="button">Entrar</button>
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- MODAL REGISTRO (HISTORIAL) -->
-    <div id="modalHistorial" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px;">
-        <div style="background: white; border-radius: 10px; max-width: 700px; width: 100%; max-height: 85vh; overflow-y: auto; padding: 25px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h3 style="margin: 0; color: var(--primary);">Registro de Seminarios evaluados</h3>
-                <button type="button" id="btnCerrarHistorial" style="background: #4b5563; color: white; border: none; border-radius: 6px; padding: 6px 12px; cursor: pointer;">✕</button>
+        <header>
+            <div class="brand-left">
+                <img src="./assets/img/tecnmBlanco.png" alt="Logo TecNM">
             </div>
-            <div id="contenedor-historial-seminarios"></div>
-        </div>
-    </div>
+            <div class="brand-center">
+                <img src="./assets/img/itv.png" alt="itv logo">
+            </div>
+            <h1>Registro de seminario</h1>
+            <p>Captura paso a paso los datos del estudiante y su evaluación</p>
+        </header>
 
-    <!-- PANTALLA 3: DIRECTORIO DE DOCENTES -->
-    <div id="vista-docentes" class="hidden">
-        <section class="card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h3 style="margin: 0; color: var(--primary);">Directorio de docentes</h3>
-                <button type="button" id="btnVolverDocentes" style="background: #4b5563; padding: 10px 15px; border-radius: 6px; color: white; border: none; font-weight: bold; cursor: pointer;">🡄 Volver</button>
-            </div>
+        <main class="container">
 
-            <!-- BARRA DE BÚSQUEDA DOCENTES -->
-            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                <input type="text" id="buscadorDocentes" placeholder="🔍 Buscar por nombre completo o usuario..." style="flex: 1; padding: 10px; border-radius: 6px; border: 1px solid var(--border); font-size: 1rem;">
-                <button type="button" id="btnDescargarDocentes" style="background: #16a34a; padding: 10px 15px; border-radius: 6px; color: white; border: none; font-weight: bold; cursor: pointer; white-space: nowrap;">Descargar docentes 📥</button>
-            </div>
+            <!-- PANTALLA 1: FORMULARIOS DE REGISTRO Y ADMIN -->
+            <div id="vista-formulario">
 
-            <div class="table-scroll-container">
-                <table style="width: 100%; text-align: left; border-collapse: collapse;">
-                    <thead>
-                        <tr style="border-bottom: 2px solid #ccc;">
-                            <th>Nombre completo</th>
-                            <th>Usuario</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tablaDocentesBody">
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- CONTROLES DE PAGINACIÓN DOCENTES -->
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding: 10px; background: #f8fafc; border-radius: 6px; border: 1px solid var(--border);">
-                <button type="button" id="btnPaginaAntDoc" style="background: #4b5563; padding: 8px 15px;">🡄 Anterior</button>
-                <span id="textoPaginacionDoc" style="font-weight: bold; color: var(--primary-dark);">Página 1 de 1</span>
-                <button type="button" id="btnPaginaSigDoc" style="background: #4b5563; padding: 8px 15px;">Siguiente 🡆</button>
-            </div>
-        </section>
-    </div>
-
-    <!-- PANTALLA 4: AGENDA / CALENDARIO -->
-    <div id="vista-agenda" class="hidden">
-        <section class="card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h3 style="margin: 0; color: var(--primary);">Agenda de seminarios programados</h3>
-                <button type="button" id="btnVolverRegistroDesdeAgenda" style="background: #4b5563; padding: 10px 15px; border-radius: 6px; color: white; border: none; font-weight: bold; cursor: pointer;">🡄 Volver</button>
-            </div>
-
-            <!-- FILTROS DE AGENDA -->
-            <div style="display: flex; gap: 10px; margin-bottom: 15px; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid var(--border); align-items: flex-end; flex-wrap: wrap;">
-                <div style="flex: 1; min-width: 150px;">
-                    <label for="filtroProgramaAgenda" style="font-size: 0.85rem; font-weight: bold; color: var(--primary-dark);">Programa</label>
-                    <select id="filtroProgramaAgenda" style="padding: 8px; border-radius: 6px; border: 1px solid var(--border); width: 100%;">
-                        <option value="todos" selected>Todos los programas</option>
-                        <option value="Maestría">Maestría</option>
-                        <option value="Doctorado">Doctorado</option>
-                    </select>
-                </div>
-                <div style="flex: 1; min-width: 150px;">
-                    <label for="filtroFaseAgenda" style="font-size: 0.85rem; font-weight: bold; color: var(--primary-dark);">Fase de seminario</label>
-                    <select id="filtroFaseAgenda" style="padding: 8px; border-radius: 6px; border: 1px solid var(--border); width: 100%;">
-                        <option value="todos" selected>Todas las fases</option>
-                        <option value="1.- Prototipo">1.- Prototipo</option>
-                        <option value="2.- Tutorial">2.- Tutorial</option>
-                        <option value="3.- Avance 1">3.- Avance 1</option>
-                        <option value="3.- Culminacion">3.- Culminacion</option>
-                        <option value="4.- Predoctoral">4.- Predoctoral</option>
-                        <option value="5.- Tutorial">5.- Tutorial</option>
-                        <option value="6.- Avance 2">6.- Avance 2</option>
-                        <option value="7.- Tutorial">7.- Tutorial</option>
-                        <option value="8.- Culminacion">8.- Culminacion</option>
-                    </select>
-                </div>
-                <div style="flex: 1; min-width: 150px;">
-                    <label for="filtroMesAgenda" style="font-size: 0.85rem; font-weight: bold; color: var(--primary-dark);">Mes</label>
-                    <select id="filtroMesAgenda" style="padding: 8px; border-radius: 6px; border: 1px solid var(--border); width: 100%;">
-                        <option value="todos">Todos los meses</option>
-                        <option value="01">Enero</option>
-                        <option value="02">Febrero</option>
-                        <option value="03">Marzo</option>
-                        <option value="04">Abril</option>
-                        <option value="05">Mayo</option>
-                        <option value="06">Junio</option>
-                        <option value="07">Julio</option>
-                        <option value="08">Agosto</option>
-                        <option value="09">Septiembre</option>
-                        <option value="10">Octubre</option>
-                        <option value="11">Noviembre</option>
-                        <option value="12">Diciembre</option>
-                    </select>
-                </div>
-                <div style="flex: 1; min-width: 120px;">
-                    <label for="filtroAnioAgenda" style="font-size: 0.85rem; font-weight: bold; color: var(--primary-dark);">Año</label>
-                    <select id="filtroAnioAgenda" style="padding: 8px; border-radius: 6px; border: 1px solid var(--border); width: 100%;">
-                        <option value="todos">Todos los años</option>
-                    </select>
-                </div>
-                <div>
-                    <button type="button" id="btnDescargarAgenda" style="background: #16a34a; padding: 10px 15px; border-radius: 6px; color: white; border: none; font-weight: bold; cursor: pointer; white-space: nowrap;">Descargar agenda 📥</button>
-                </div>
-            </div>
-
-            <div id="contenedorAgenda" style="display: grid; gap: 15px;">
-            </div>
-        </section>
-    </div>
-
-    <div id="modalRetro" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px;">
-        <div style="background: white; border-radius: 10px; max-width: 600px; width: 100%; max-height: 80vh; overflow-y: auto; padding: 25px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <h3 id="retroTitulo" style="margin: 0; color: var(--primary);">Retroalimentación</h3>
-                <button type="button" id="btnCerrarRetro" style="background: #4b5563; color: white; border: none; border-radius: 6px; padding: 6px 12px; cursor: pointer;">✕</button>
-            </div>
-            <div id="retroContenido">Cargando...</div>
-        </div>
-    </div>
-
-    <div id="modalEditarDocente" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px;">
-        <div style="background: white; border-radius: 10px; max-width: 480px; width: 100%; padding: 25px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h3 style="margin: 0; color: var(--primary);">Editar docente</h3>
-                <button type="button" id="btnCerrarEditarDocente" style="background: #4b5563; color: white; border: none; border-radius: 6px; padding: 6px 12px; cursor: pointer;">✕</button>
-            </div>
-            <input type="hidden" id="editDocenteId" />
-            <div class="grid">
-                <div>
-                    <label for="editDocenteNombre">Nombre completo</label>
-                    <input type="text" id="editDocenteNombre" pattern="[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+" title="Solo letras y espacios" />
-                </div>
-                <div>
-                    <label for="editDocenteUsuario">Usuario</label>
-                    <input type="text" id="editDocenteUsuario" />
+                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-bottom: 15px;">
+                    <button type="button" id="btnVerAgenda"
+                        style="background: #2563eb; padding: 10px 15px; border-radius: 6px; color: white; border: none; font-weight: bold; cursor: pointer;">Ver
+                        agenda 📅</button>
+                    <button type="button" id="btnVerDirectorio"
+                        style="background: #4b5563; padding: 10px 15px; border-radius: 6px; color: white; border: none; font-weight: bold; cursor: pointer;">Ver
+                        directorio alumnos📋</button>
                 </div>
 
-                <div>
-                    <label for="editDocentePass">Nueva contraseña (opcional)</label>
-                    <div class="password-container">
-                        <input type="password" id="editDocentePass" placeholder="Dejar en blanco para no cambiarla" />
-                        <button type="button" class="btn-toggle-password" tabindex="-1" title="Mostrar contraseña">👁️</button>
+                <section class="card">
+                    <div class="steps" aria-hidden="true">
+                        <div class="step step-1 active">Paso 1: Datos básicos</div>
+                        <div class="step step-2">Paso 2: Seminario</div>
                     </div>
-                    <small style="color: #6b7280; font-size: 0.8rem;">La contraseña debe tener al menos 8 caracteres</small>
+
+                    <form id="formSeminario" novalidate>
+
+                        <!-- PASO 1 -->
+                        <fieldset id="fsPaso1">
+                            <legend>1) Datos básicos del estudiante</legend>
+                            <!-- botón para seleccionar alumno existente -->
+                            <div
+                                style="background: #eff6ff; padding: 12px; border-radius: 8px; border: 1px dashed var(--primary); margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between;">
+                                <span style="font-size: 0.95rem; color: var(--primary-dark); font-weight: bold;">¿El
+                                    alumno ya existe en el sistema?</span>
+                                <div style="display: flex; gap: 8px;">
+                                    <button type="button" id="btnAbrirSeleccion"
+                                        style="background: #16a34a; padding: 8px 12px; font-size: 0.85rem; color: white; border: none; border-radius: 6px; cursor: pointer;">Seleccionar
+                                        alumno</button>
+                                    <button type="button" id="btnBorrarSeleccion" class="hidden"
+                                        style="background: #f97316; padding: 8px 12px; font-size: 0.85rem; color: white; border: none; border-radius: 6px; cursor: pointer;">Borrar
+                                        selección</button>
+                                </div>
+                            </div>
+                            <div class="grid">
+                                <div>
+                                    <label for="usuarioAlumno">Nombre de usuario</label>
+                                    <input type="text" id="usuarioAlumno" placeholder="Ej. A123"
+                                        pattern="[A-Za-z0-9]{4,}"
+                                        title="Mínimo 4 caracteres, letras y/o números sin espacios" required />
+                                </div>
+                                <div>
+                                    <label for="password_estudiante" id="lbl_pass_est">Contraseña (AñoMesDía)</label>
+                                    <input type="text" id="password_estudiante" placeholder="Ej. Pass123"
+                                        pattern="[A-Za-z0-9]{4,}" title="Mínimo 4 caracteres alfanuméricos" required />
+                                </div>
+                                <div>
+                                    <label for="nombre">Nombre completo</label>
+                                    <input type="text" id="nombre" pattern="[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+"
+                                        title="Solo letras y espacios" placeholder="Ej. Juan Pérez" required />
+                                </div>
+                                <div>
+                                    <label for="correo">Correo (Opcional)</label>
+                                    <input type="email" id="correo" placeholder="ejemplo@dominio.com" />
+                                </div>
+                                <div>
+                                    <label for="programa">Programa</label>
+                                    <select id="programa" required>
+                                        <option value="" selected disabled>Selecciona...</option>
+                                        <option value="Maestría">Maestría</option>
+                                        <option value="Doctorado">Doctorado</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="titulo">Título del proyecto</label>
+                                    <input type="text" id="titulo" required />
+                                </div>
+                            </div>
+                            <div class="row-actions">
+                                <button type="button" id="btnSiguientePaso">Siguiente ➔</button>
+                            </div>
+                        </fieldset>
+
+                        <!-- PASO 2 -->
+                        <fieldset id="fsPaso2" class="hidden">
+                            <legend>2) Información del seminario</legend>
+                            <div class="grid">
+
+                                <div
+                                    style="background: #eff6ff; padding: 10px; border-radius: 8px; border: 1px dashed var(--primary); grid-column: 1 / -1;">
+                                    <label for="clave_acceso"
+                                        style="color: var(--primary-dark); font-weight: bold;">Clave de acceso
+                                        (Editable)</label>
+                                    <div style="display:flex; gap:5px;">
+                                        <input type="text" id="clave_acceso" required
+                                            placeholder="Generar o escribir clave..."
+                                            style="font-family: monospace; font-size: 1.1rem; text-align: center;" />
+                                        <button type="button" id="btnGenerarClave"
+                                            style="padding: 10px; flex-shrink: 0; background: var(--accent); color: var(--primary-dark);"
+                                            title="Generar clave">🎲</button>
+                                        <button type="button" id="btnLimpiarClave"
+                                            style="padding: 10px; flex-shrink: 0; background: var(--error); color: white;"
+                                            title="Vaciar campo">🗑️</button>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label for="tipo_seminario">Seminario</label>
+                                    <select id="tipo_seminario" required>
+                                        <option value="" selected disabled>Selecciona un programa primero</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="modalidad">Modalidad</label>
+                                    <select id="modalidad" required>
+                                        <option value="Presencial">Presencial</option>
+                                        <option value="Virtual">Virtual</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label for="lugar_select">Aula / Modalidad del lugar</label>
+                                    <select id="lugar_select" required>
+                                        <option value="" selected disabled>Selecciona...</option>
+                                        <option value="Raúl Limón">Aula Raúl Limón</option>
+                                        <option value="Fermín Carrillo">Aula Fermín Carrillo</option>
+                                        <option value="Virtual">Virtual (Google Meet / Zoom)</option>
+                                        <option value="Personalizado">Personalizado (escribir aula)</option>
+                                    </select>
+                                    <input type="text" id="lugar_virtual" class="hidden" style="margin-top:6px;"
+                                        placeholder="Pega el enlace de Meet, Zoom, etc." />
+                                    <input type="text" id="lugar_personalizado" class="hidden" style="margin-top:6px;"
+                                        placeholder="Escribe el aula específica" />
+                                </div>
+                                <div>
+                                    <label for="duracion_select">Duración</label>
+                                    <select id="duracion_select" required>
+                                        <option value="" selected disabled>Selecciona...</option>
+                                        <option value="30 min">30 min</option>
+                                        <option value="40 min">40 min</option>
+                                        <option value="60 min">60 min</option>
+                                        <option value="Personalizado">Personalizado</option>
+                                    </select>
+                                    <input type="text" id="duracion_personalizada" class="hidden"
+                                        style="margin-top:6px;" placeholder="Ej. 45 min, 90 min..." />
+                                </div>
+
+                                <div>
+                                    <label for="fecha">Fecha</label>
+                                    <input type="date" id="fecha" required>
+                                </div>
+                                <div>
+                                    <label for="hora">Hora</label>
+                                    <input type="time" id="hora" required>
+                                </div>
+
+                                <div>
+                                    <label for="presidente">Presidente del jurado (Opcional)</label>
+                                    <input type="text" id="presidente" />
+                                </div>
+                                <div>
+                                    <label for="secretario">Secretario (Opcional)</label>
+                                    <input type="text" id="secretario" />
+                                </div>
+                                <div>
+                                    <label for="vocal">Vocal (Opcional)</label>
+                                    <input type="text" id="vocal" />
+                                </div>
+
+                                <div>
+                                    <label for="observaciones">Observaciones (Opcional)</label>
+                                    <input type="text" id="observaciones" />
+                                </div>
+                            </div>
+
+                            <div class="row-actions">
+                                <button type="button" id="btnRegresarPaso" style="background: #6b7280;">🡄
+                                    Regresar</button>
+                                <button type="submit" id="btnGuardarFinal">Agendar y guardar</button>
+                            </div>
+                        </fieldset>
+                    </form>
+
+                    <div id="panelAdmin" class="card hidden"
+                        style="margin-bottom: 20px; border-top: 4px solid var(--primary); margin-top: 20px;">
+                        <h2 style="color: var(--primary); margin-top: 0;">🛠️ Panel de administración</h2>
+                        <p>Registrar un nuevo profesor o evaluador en el sistema.</p>
+
+                        <div class="grid" style="margin-top: 15px;">
+                            <div>
+                                <label for="nuevoDocenteNombre">Nombre completo</label>
+                                <input type="text" id="nuevoDocenteNombre" placeholder="Ej. Dra. María López">
+                            </div>
+                            <div>
+                                <label for="nuevoDocenteUsuario">Usuario (Para iniciar sesión)</label>
+                                <input type="text" id="nuevoDocenteUsuario" placeholder="mlopez">
+                            </div>
+
+                            <div>
+                                <label for="nuevoDocentePass">Contraseña (min 8 caracteres/numeros)</label>
+                                <div class="password-container">
+                                    <input type="password" id="nuevoDocentePass" placeholder="••••••••">
+                                    <button type="button" class="btn-toggle-password" tabindex="-1"
+                                        title="Mostrar contraseña">👁️</button>
+                                </div>
+                                <small style="color: #6b7280; font-size: 0.8rem;">La contraseña debe tener al menos 8
+                                    caracteres</small>
+                            </div>
+                        </div>
+
+                        <div id="msgRegistroDocente" style="margin-top: 10px; font-weight: bold;"></div>
+                        <div class="row-actions" style="margin-top: 10px; justify-content: space-between;">
+                            <button type="button" id="btnVerDocentes" style="background: #4b5563;">Ver directorio de
+                                docentes 👩‍🏫</button>
+                            <button type="button" id="btnCrearDocente">Registrar docente</button>
+
+                            <button type="button" id="btnEditarMiPerfilAdmin" style="background: #d97706;">Mis datos de
+                                Admin ⚙️</button>
+                        </div>
+                    </div>
+
+            </div>
+
+            <!-- PANTALLA 2: DIRECTORIO DE ALUMNOS -->
+            <div id="vista-directorio" class="hidden">
+                <section class="card">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="margin: 0; color: var(--primary);">Directorio de estudiantes</h3>
+                        <button type="button" id="btnVolverRegistro"
+                            style="background: #4b5563; padding: 10px 15px; border-radius: 6px; color: white; border: none; font-weight: bold; cursor: pointer;">🡄
+                            Volver al registro</button>
+                    </div>
+
+                    <!-- BARRA DE BÚSQUEDA -->
+                    <div
+                        style="display: flex; gap: 10px; margin-bottom: 15px; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid var(--border); align-items: flex-end; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 200px;">
+                            <label for="buscadorAlumnos"
+                                style="font-size: 0.85rem; font-weight: bold; color: var(--primary-dark);">Buscar
+                                alumno</label>
+                            <input type="text" id="buscadorAlumnos" placeholder="🔍 Nombre o control..."
+                                style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border); font-size: 1rem;">
+                        </div>
+                        <div style="flex: 1; min-width: 150px;">
+                            <label for="filtroProgramaAlumnos"
+                                style="font-size: 0.85rem; font-weight: bold; color: var(--primary-dark);">Programa</label>
+                            <select id="filtroProgramaAlumnos"
+                                style="padding: 8px; border-radius: 6px; border: 1px solid var(--border); width: 100%;">
+                                <option value="todos" selected>Todos los programas</option>
+                                <option value="Maestría">Maestría</option>
+                                <option value="Doctorado">Doctorado</option>
+                            </select>
+                        </div>
+                        <div style="flex: 1; min-width: 150px;">
+                            <label for="filtroFaseAlumnos"
+                                style="font-size: 0.85rem; font-weight: bold; color: var(--primary-dark);">Fase de
+                                seminario</label>
+                            <select id="filtroFaseAlumnos"
+                                style="padding: 8px; border-radius: 6px; border: 1px solid var(--border); width: 100%;">
+                                <option value="todos" selected>Todas las fases</option>
+                                <option value="1.- Prototipo">1.- Prototipo</option>
+                                <option value="2.- Tutorial">2.- Tutorial</option>
+                                <option value="3.- Avance 1">3.- Avance 1</option>
+                                <option value="3.- Culminacion">3.- Culminacion</option>
+                                <option value="4.- Predoctoral">4.- Predoctoral</option>
+                                <option value="5.- Tutorial">5.- Tutorial</option>
+                                <option value="6.- Avance 2">6.- Avance 2</option>
+                                <option value="7.- Tutorial">7.- Tutorial</option>
+                                <option value="8.- Culminacion">8.- Culminacion</option>
+                            </select>
+                        </div>
+                        <div>
+                            <button type="button" id="btnDescargarReporte"
+                                style="background: #16a34a; padding: 10px 15px; border-radius: 6px; color: white; border: none; font-weight: bold; cursor: pointer; white-space: nowrap;">Descargar
+                                Excel 📥</button>
+                        </div>
+                    </div>
+
+                    <div class="table-scroll-container">
+                        <table style="width: 100%; text-align: left; border-collapse: collapse;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid #ccc;">
+                                    <th>Nombre</th>
+                                    <th>Nombre de usuario</th>
+                                    <th>Seminarios Activos</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaEstudiantesBody">
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- CONTROLES DE PAGINACIÓN -->
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding: 10px; background: #f8fafc; border-radius: 6px; border: 1px solid var(--border);">
+                        <button type="button" id="btnPaginaAnt" style="background: #4b5563; padding: 8px 15px;">🡄
+                            Anterior</button>
+                        <span id="textoPaginacion" style="font-weight: bold; color: var(--primary-dark);">Página 1 de
+                            1</span>
+                        <button type="button" id="btnPaginaSig"
+                            style="background: #4b5563; padding: 8px 15px;">Siguiente 🡆</button>
+                    </div>
+                </section>
+            </div>
+
+            <!-- NUEVA PANTALLA: DETALLES DE ESTUDIANTE -->
+            <div id="vista-detalles-estudiante" class="hidden">
+                <section class="card">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="margin: 0; color: var(--primary);">Detalles de estudiante</h3>
+                        <button type="button" id="btnVolverDirectorio"
+                            style="background: #4b5563; padding: 10px 15px; border-radius: 6px; color: white; border: none; font-weight: bold; cursor: pointer;">🡄
+                            Volver al directorio</button>
+                    </div>
+
+                    <!-- Panel superior: Info del alumno y sus 3 botones -->
+                    <div
+                        style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <h2 id="detalles-nombre" style="margin: 0; color: var(--primary-dark);">Nombre Alumno</h2>
+                            <p id="detalles-control" style="margin: 5px 0 0; color: #4b5563; font-weight: bold;">Control
+                            </p>
+                            <p id="detalles-programa" style="margin: 2px 0 0; color: #4b5563; font-weight: bold;">
+                                Programa</p>
+                        </div>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <button type="button" id="btnEditarSoloAlumno"
+                                style="background: #d97706; padding: 8px 15px; border-radius: 6px; color: white; border: none; font-weight: bold; cursor: pointer;">Editar
+                                Alumno</button>
+                            <button type="button" id="btnHistorialSeminarios"
+                                style="background: #2563eb; padding: 8px 15px; border-radius: 6px; color: white; border: none; font-weight: bold; cursor: pointer;">Registro
+                                (Historial)</button>
+                            <button type="button" id="btnEliminarAlumnoTotal" class="btn-danger"
+                                style="padding: 8px 15px; border-radius: 6px; color: white; border: none; font-weight: bold; cursor: pointer;">Eliminar
+                                Alumno</button>
+                        </div>
+                    </div>
+
+                    <!-- Lista de seminarios activos -->
+                    <h3
+                        style="color: var(--primary); margin-bottom: 10px; border-bottom: 2px solid var(--accent); padding-bottom: 5px;">
+                        Seminarios Activos</h3>
+                    <div id="contenedor-seminarios-activos"></div>
+                </section>
+            </div>
+
+            <!-- MODAL EDITAR SOLO ESTUDIANTE -->
+            <div id="modalEditarSoloEstudiante" class="hidden"
+                style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px;">
+                <div style="background: white; border-radius: 10px; max-width: 500px; width: 100%; padding: 25px;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="margin: 0; color: var(--primary);">Editar datos del Alumno</h3>
+                        <button type="button" id="btnCerrarEditarSoloEstudiante"
+                            style="background: #4b5563; color: white; border: none; border-radius: 6px; padding: 6px 12px; cursor: pointer;">✕</button>
+                    </div>
+                    <input type="hidden" id="editSoloEstudianteId" />
+                    <div class="grid">
+                        <div style="grid-column: 1 / -1;">
+                            <label for="edit_solo_usuarioAlumno">Número de control</label>
+                            <input type="text" id="edit_solo_usuarioAlumno" pattern="[A-Za-z0-9]{4,}"
+                                title="Mínimo 4 letras/numeros, sin espacios" required />
+                        </div>
+                        <div style="grid-column: 1 / -1;">
+                            <label for="edit_solo_nombre">Nombre completo</label>
+                            <input type="text" id="edit_solo_nombre" pattern="[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+"
+                                title="Solo letras y espacios" required />
+                        </div>
+                        <div style="grid-column: 1 / -1;">
+                            <label for="edit_solo_correo">Correo</label>
+                            <input type="email" id="edit_solo_correo" />
+                        </div>
+                        <div style="grid-column: 1 / -1;" class="hidden">
+                            <label for="edit_solo_programa">Programa</label>
+                            <select id="edit_solo_programa" required>
+                                <option value="Maestría">Maestría</option>
+                                <option value="Doctorado">Doctorado</option>
+                            </select>
+                        </div>
+
+                        <div style="grid-column: 1 / -1;">
+                            <label for="edit_solo_password">Nueva contraseña (opcional)</label>
+                            <div class="password-container">
+                                <input type="text" id="edit_solo_password" pattern="[A-Za-z0-9]{4,}"
+                                    title="Mínimo 4 caracteres alfanuméricos"
+                                    placeholder="Dejar en blanco para no cambiarla" />
+                                <button type="button" class="btn-toggle-password" tabindex="-1"
+                                    title="Mostrar contraseña">👁️</button>
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="row-actions" style="margin-top: 15px;">
+                        <button type="button" id="btnGuardarSoloEstudiante">Guardar cambios</button>
+                    </div>
                 </div>
-
-            </div>
-            <div id="msgEditarDocente" style="margin-top: 10px; font-weight: bold;"></div>
-            <div class="row-actions" style="margin-top: 15px;">
-                <button type="button" id="btnGuardarEditarDocente">Guardar cambios</button>
-            </div>
-        </div>
-    </div>
-
-<div id="modalEditarAlumno" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px;">
-        <div style="background: white; border-radius: 10px; max-width: 700px; width: 100%; max-height: 88vh; overflow-y: auto; padding: 25px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h3 style="margin: 0; color: var(--primary);">Editar Seminario</h3>
-                <button type="button" id="btnCerrarEditarAlumno" style="background: #4b5563; color: white; border: none; border-radius: 6px; padding: 6px 12px; cursor: pointer;">✕</button>
             </div>
 
-            <input type="hidden" id="editSeminarioId" />
-            <input type="hidden" id="edit_id_estudiante" />
+            <!-- MODAL REGISTRO (HISTORIAL) -->
+            <div id="modalHistorial" class="hidden"
+                style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px;">
+                <div
+                    style="background: white; border-radius: 10px; max-width: 700px; width: 100%; max-height: 85vh; overflow-y: auto; padding: 25px;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="margin: 0; color: var(--primary);">Registro de Seminarios evaluados</h3>
+                        <button type="button" id="btnCerrarHistorial"
+                            style="background: #4b5563; color: white; border: none; border-radius: 6px; padding: 6px 12px; cursor: pointer;">✕</button>
+                    </div>
+                    <div id="contenedor-historial-seminarios"></div>
+                </div>
+            </div>
 
-            <fieldset style="border: 1px solid var(--border); border-radius: 8px; margin-bottom: 15px;">
-                <legend>Datos del seminario</legend>
-                <div class="grid">
-                    <div style="grid-column: 1 / -1;">
-                        <label for="edit_titulo">Título del proyecto</label>
-                        <input type="text" id="edit_titulo" required />
+            <!-- PANTALLA 3: DIRECTORIO DE DOCENTES -->
+            <div id="vista-docentes" class="hidden">
+                <section class="card">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="margin: 0; color: var(--primary);">Directorio de docentes</h3>
+                        <button type="button" id="btnVolverDocentes"
+                            style="background: #4b5563; padding: 10px 15px; border-radius: 6px; color: white; border: none; font-weight: bold; cursor: pointer;">🡄
+                            Volver</button>
                     </div>
-                    <div>
-                        <label for="edit_tipo_seminario">Seminario</label>
-                        <select id="edit_tipo_seminario" required>
-                            <option value="" selected disabled>Selecciona un programa primero</option>
-                        </select>
+
+                    <!-- BARRA DE BÚSQUEDA DOCENTES -->
+                    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                        <input type="text" id="buscadorDocentes"
+                            placeholder="🔍 Buscar por nombre completo o usuario..."
+                            style="flex: 1; padding: 10px; border-radius: 6px; border: 1px solid var(--border); font-size: 1rem;">
+                        <button type="button" id="btnDescargarDocentes"
+                            style="background: #16a34a; padding: 10px 15px; border-radius: 6px; color: white; border: none; font-weight: bold; cursor: pointer; white-space: nowrap;">Descargar
+                            docentes 📥</button>
                     </div>
-                    <div>
-                        <label for="edit_modalidad">Modalidad</label>
-                        <select id="edit_modalidad" required>
-                            <option value="Presencial">Presencial</option>
-                            <option value="Virtual">Virtual</option>
-                        </select>
+
+                    <div class="table-scroll-container">
+                        <table style="width: 100%; text-align: left; border-collapse: collapse;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid #ccc;">
+                                    <th>Nombre completo</th>
+                                    <th>Usuario</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaDocentesBody">
+                            </tbody>
+                        </table>
                     </div>
-                    <div>
-                        <label for="edit_lugar_select">Aula / Modalidad del lugar</label>
-                        <select id="edit_lugar_select" required>
-                            <option value="Raúl Limón">Aula Raúl Limón</option>
-                            <option value="Fermín Carrillo">Aula Fermín Carrillo</option>
-                            <option value="Virtual">Virtual (Google Meet / Zoom)</option>
-                            <option value="Personalizado">Personalizado (escribir aula)</option>
-                        </select>
-                        <input type="text" id="edit_lugar_virtual" class="hidden" style="margin-top:6px;" placeholder="Pega el enlace de Meet, Zoom, etc." />
-                        <input type="text" id="edit_lugar_personalizado" class="hidden" style="margin-top:6px;" placeholder="Escribe el aula específica" />
+
+                    <!-- CONTROLES DE PAGINACIÓN DOCENTES -->
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding: 10px; background: #f8fafc; border-radius: 6px; border: 1px solid var(--border);">
+                        <button type="button" id="btnPaginaAntDoc" style="background: #4b5563; padding: 8px 15px;">🡄
+                            Anterior</button>
+                        <span id="textoPaginacionDoc" style="font-weight: bold; color: var(--primary-dark);">Página 1 de
+                            1</span>
+                        <button type="button" id="btnPaginaSigDoc"
+                            style="background: #4b5563; padding: 8px 15px;">Siguiente 🡆</button>
                     </div>
-                    <div>
-                        <label for="edit_duracion_select">Duración</label>
-                        <select id="edit_duracion_select" required>
-                            <option value="30 min">30 min</option>
-                            <option value="40 min">40 min</option>
-                            <option value="60 min">60 min</option>
-                            <option value="Personalizado">Personalizado</option>
-                        </select>
-                        <input type="text" id="edit_duracion_personalizada" class="hidden" style="margin-top:6px;" placeholder="Ej. 45 min, 90 min..." />
+                </section>
+            </div>
+
+            <!-- PANTALLA 4: AGENDA / CALENDARIO -->
+            <div id="vista-agenda" class="hidden">
+                <section class="card">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="margin: 0; color: var(--primary);">Agenda de seminarios programados</h3>
+                        <button type="button" id="btnVolverRegistroDesdeAgenda"
+                            style="background: #4b5563; padding: 10px 15px; border-radius: 6px; color: white; border: none; font-weight: bold; cursor: pointer;">🡄
+                            Volver</button>
                     </div>
-                    <div>
-                        <label for="edit_fecha">Fecha</label>
-                        <input type="date" id="edit_fecha" required>
+
+                    <!-- FILTROS DE AGENDA -->
+                    <div
+                        style="display: flex; gap: 10px; margin-bottom: 15px; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid var(--border); align-items: flex-end; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 150px;">
+                            <label for="filtroProgramaAgenda"
+                                style="font-size: 0.85rem; font-weight: bold; color: var(--primary-dark);">Programa</label>
+                            <select id="filtroProgramaAgenda"
+                                style="padding: 8px; border-radius: 6px; border: 1px solid var(--border); width: 100%;">
+                                <option value="todos" selected>Todos los programas</option>
+                                <option value="Maestría">Maestría</option>
+                                <option value="Doctorado">Doctorado</option>
+                            </select>
+                        </div>
+                        <div style="flex: 1; min-width: 150px;">
+                            <label for="filtroFaseAgenda"
+                                style="font-size: 0.85rem; font-weight: bold; color: var(--primary-dark);">Fase de
+                                seminario</label>
+                            <select id="filtroFaseAgenda"
+                                style="padding: 8px; border-radius: 6px; border: 1px solid var(--border); width: 100%;">
+                                <option value="todos" selected>Todas las fases</option>
+                                <option value="1.- Prototipo">1.- Prototipo</option>
+                                <option value="2.- Tutorial">2.- Tutorial</option>
+                                <option value="3.- Avance 1">3.- Avance 1</option>
+                                <option value="3.- Culminacion">3.- Culminacion</option>
+                                <option value="4.- Predoctoral">4.- Predoctoral</option>
+                                <option value="5.- Tutorial">5.- Tutorial</option>
+                                <option value="6.- Avance 2">6.- Avance 2</option>
+                                <option value="7.- Tutorial">7.- Tutorial</option>
+                                <option value="8.- Culminacion">8.- Culminacion</option>
+                            </select>
+                        </div>
+                        <div style="flex: 1; min-width: 150px;">
+                            <label for="filtroMesAgenda"
+                                style="font-size: 0.85rem; font-weight: bold; color: var(--primary-dark);">Mes</label>
+                            <select id="filtroMesAgenda"
+                                style="padding: 8px; border-radius: 6px; border: 1px solid var(--border); width: 100%;">
+                                <option value="todos">Todos los meses</option>
+                                <option value="01">Enero</option>
+                                <option value="02">Febrero</option>
+                                <option value="03">Marzo</option>
+                                <option value="04">Abril</option>
+                                <option value="05">Mayo</option>
+                                <option value="06">Junio</option>
+                                <option value="07">Julio</option>
+                                <option value="08">Agosto</option>
+                                <option value="09">Septiembre</option>
+                                <option value="10">Octubre</option>
+                                <option value="11">Noviembre</option>
+                                <option value="12">Diciembre</option>
+                            </select>
+                        </div>
+                        <div style="flex: 1; min-width: 120px;">
+                            <label for="filtroAnioAgenda"
+                                style="font-size: 0.85rem; font-weight: bold; color: var(--primary-dark);">Año</label>
+                            <select id="filtroAnioAgenda"
+                                style="padding: 8px; border-radius: 6px; border: 1px solid var(--border); width: 100%;">
+                                <option value="todos">Todos los años</option>
+                            </select>
+                        </div>
+                        <div>
+                            <button type="button" id="btnDescargarAgenda"
+                                style="background: #16a34a; padding: 10px 15px; border-radius: 6px; color: white; border: none; font-weight: bold; cursor: pointer; white-space: nowrap;">Descargar
+                                agenda 📥</button>
+                        </div>
                     </div>
-                    <div>
-                        <label for="edit_hora">Hora</label>
-                        <input type="time" id="edit_hora" required>
+
+                    <div id="contenedorAgenda" style="display: grid; gap: 15px;">
                     </div>
-                    <div>
-                        <label for="edit_presidente">Presidente del jurado (Opcional)</label>
-                        <input type="text" id="edit_presidente" />
+                </section>
+            </div>
+
+            <!-- MODAL RETROALIMENTACIÓN (REDISEÑADO CON PESTAÑAS) -->
+            <div id="modalRetro" class="hidden"
+                style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px;">
+                <div
+                    style="background: white; border-radius: 10px; max-width: 800px; width: 100%; max-height: 85vh; overflow-y: auto; padding: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <div>
+                            <h3 id="retroTitulo" style="margin: 0; color: var(--primary);">Retroalimentación</h3>
+                            <p id="retroSubtitulo" style="margin: 4px 0 0; color: #6b7280; font-size: 0.9rem;"></p>
+                        </div>
+                        <button type="button" id="btnCerrarRetro"
+                            style="background: #4b5563; color: white; border: none; border-radius: 6px; padding: 6px 12px; cursor: pointer; font-weight:bold;">✕</button>
                     </div>
-                    <div>
-                        <label for="edit_secretario">Secretario (Opcional)</label>
-                        <input type="text" id="edit_secretario" />
+
+                    <!-- PESTAÑAS DE NAVEGACIÓN -->
+                    <div id="tabsRetroContainer"
+                        style="display: flex; gap: 5px; border-bottom: 2px solid var(--border); margin-bottom: 20px;">
+                        <button type="button" onclick="renderizarPestanaRetro('Externo')" class="tab-retro"
+                            id="tab-retro-Externo"
+                            style="padding: 10px 20px; background: var(--primary); color: white; border: none; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: bold;">Externos</button>
+                        <button type="button" onclick="renderizarPestanaRetro('Docente')" class="tab-retro"
+                            id="tab-retro-Docente"
+                            style="padding: 10px 20px; background: #f1f5f9; color: #64748b; border: 1px solid var(--border); border-bottom: none; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: bold;">Docentes</button>
+                        <button type="button" onclick="renderizarPestanaRetro('Alumno')" class="tab-retro"
+                            id="tab-retro-Alumno"
+                            style="padding: 10px 20px; background: #f1f5f9; color: #64748b; border: 1px solid var(--border); border-bottom: none; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: bold;">Alumnos</button>
                     </div>
-                    <div>
-                        <label for="edit_vocal">Vocal (Opcional)</label>
-                        <input type="text" id="edit_vocal" />
+
+                    <!-- CONTENIDO DINÁMICO DE LA PESTAÑA -->
+                    <div id="retroContenido">Cargando...</div>
+                </div>
+            </div>
+
+            <!-- VISUALIZADOR DEL CUESTIONARIO -->
+            <div id="modalDetalleEvaluacion" class="hidden"
+                style="position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 2100; display: flex; align-items: center; justify-content: center; padding: 20px;">
+                <div
+                    style="background: white; border-radius: 10px; max-width: 850px; width: 100%; max-height: 90vh; overflow-y: auto; padding: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid var(--accent); padding-bottom: 15px; margin-bottom: 20px;">
+                        <div>
+                            <h2 style="margin: 0 0 5px 0; color: var(--primary);">Detalle de Evaluación</h2>
+                            <p id="detalleEvalSubtitulo" style="margin: 0; font-size: 0.95rem; color: #4b5563;">
+                                <strong>Evaluador:</strong> --- | <strong>Rol:</strong> --- | <strong>Fecha:</strong>
+                                ---
+                            </p>
+                            <p id="detalleEvalCalificacion"
+                                style="margin: 5px 0 0; font-size: 1.1rem; color: var(--ok); font-weight: bold;">
+                                Calificación: --- / 100</p>
+                        </div>
+                        <button type="button" id="btnCerrarDetalleEvaluacion"
+                            style="background: var(--error); color: white; border: none; border-radius: 6px; padding: 8px 15px; cursor: pointer; font-weight: bold;">Cerrar</button>
                     </div>
-                    <div>
-                        <label for="edit_observaciones">Observaciones (Opcional)</label>
-                        <input type="text" id="edit_observaciones" />
+
+                    <div id="detalleEvalCuestionario">
+
+                    </div>
+
+                    <div style="margin-top: 25px; padding-top: 20px; border-top: 2px solid var(--border);">
+                        <h4 style="color: var(--primary); margin: 0 0 10px 0;">Observaciones y retroalimentación:</h4>
+                        <p id="detalleEvalComentarios"
+                            style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid var(--border); color: #333; font-style: italic; white-space: pre-wrap; margin: 0;">
+                        </p>
                     </div>
                 </div>
-            </fieldset>
+            </div>
 
-            <div id="msgEditarAlumno" style="margin-top: 10px; font-weight: bold;"></div>
-            <div class="row-actions" style="margin-top: 15px;">
-                <button type="button" id="btnGuardarEditarAlumno">Guardar cambios del seminario</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL DETALLES DE LA AGENDA -->
-    <div id="modalDetallesAgenda" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px;">
-        <div style="background: white; border-radius: 10px; max-width: 500px; width: 100%; padding: 25px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h3 style="margin: 0; color: var(--primary);">Detalles del evento</h3>
-                <button type="button" id="btnCerrarDetallesAgenda" style="background: #4b5563; color: white; border: none; border-radius: 6px; padding: 6px 12px; cursor: pointer;">✕</button>
-            </div>
-            <div id="contenidoDetallesAgenda" style="line-height: 1.6; color: var(--text);">
-            </div>
-        </div>
-    </div>
-
-    <!-- modal seleccionar alumno existente -->
-    <div id="modalSeleccionAlumno" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px;">
-        <div style="background: white; border-radius: 10px; max-width: 600px; width: 100%; max-height: 80vh; overflow-y: auto; padding: 25px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <h3 style="margin: 0; color: var(--primary);">Seleccionar alumno</h3>
-                <button type="button" onclick="document.getElementById('modalSeleccionAlumno').classList.add('hidden')" style="background: #4b5563; color: white; border: none; border-radius: 6px; padding: 6px 12px; cursor: pointer;">✕</button>
-            </div>
-            <input type="text" id="buscadorSeleccion" placeholder="🔍 Buscar alumno por nombre o control..." style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border); margin-bottom: 10px;">
-            <div class="table-scroll-container">
-                <table style="width: 100%; text-align: left; border-collapse: collapse;">
-                    <thead><tr style="border-bottom: 2px solid #ccc;"><th>Nombre</th><th>No. Control</th><th>Acción</th></tr></thead>
-                    <tbody id="tablaSeleccionBody"></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL EDITAR PERFIL ADMIN -->
-    <div id="modalEditarAdmin" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px;">
-        <div style="background: white; border-radius: 10px; max-width: 400px; width: 100%; padding: 25px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h3 style="margin: 0; color: var(--primary);">Mis datos de administrador</h3>
-                <button type="button" id="btnCerrarEditarAdmin" style="background: #4b5563; color: white; border: none; border-radius: 6px; padding: 6px 12px; cursor: pointer;">✕</button>
-            </div>
-            <div class="grid" style="grid-template-columns: 1fr;">
-                <div>
-                    <label for="editAdminUsuario">Nuevo usuario (opcional)</label>
-                    <input type="text" id="editAdminUsuario" placeholder="Dejar en blanco para conservar el actual" />
-                </div>
-
-                <div>
-                    <label for="editAdminPass">Nueva contraseña (opcional)</label>
-                    <div class="password-container">
-                        <input type="password" id="editAdminPass" placeholder="Dejar en blanco para conservar la actual" />
-                        <button type="button" class="btn-toggle-password" tabindex="-1" title="Mostrar contraseña">👁️</button>
+            <div id="modalEditarDocente" class="hidden"
+                style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px;">
+                <div style="background: white; border-radius: 10px; max-width: 480px; width: 100%; padding: 25px;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="margin: 0; color: var(--primary);">Editar docente</h3>
+                        <button type="button" id="btnCerrarEditarDocente"
+                            style="background: #4b5563; color: white; border: none; border-radius: 6px; padding: 6px 12px; cursor: pointer;">✕</button>
                     </div>
-                    <small style="color: #6b7280; font-size: 0.8rem;">La contraseña debe tener al menos 8 caracteres</small>
+                    <input type="hidden" id="editDocenteId" />
+                    <div class="grid">
+                        <div>
+                            <label for="editDocenteNombre">Nombre completo</label>
+                            <input type="text" id="editDocenteNombre" pattern="[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+"
+                                title="Solo letras y espacios" />
+                        </div>
+                        <div>
+                            <label for="editDocenteUsuario">Usuario</label>
+                            <input type="text" id="editDocenteUsuario" />
+                        </div>
+
+                        <div>
+                            <label for="editDocentePass">Nueva contraseña (opcional)</label>
+                            <div class="password-container">
+                                <input type="password" id="editDocentePass"
+                                    placeholder="Dejar en blanco para no cambiarla" />
+                                <button type="button" class="btn-toggle-password" tabindex="-1"
+                                    title="Mostrar contraseña">👁️</button>
+                            </div>
+                            <small style="color: #6b7280; font-size: 0.8rem;">La contraseña debe tener al menos 8
+                                caracteres</small>
+                        </div>
+
+                    </div>
+                    <div id="msgEditarDocente" style="margin-top: 10px; font-weight: bold;"></div>
+                    <div class="row-actions" style="margin-top: 15px;">
+                        <button type="button" id="btnGuardarEditarDocente">Guardar cambios</button>
+                    </div>
                 </div>
-
             </div>
-            <div id="msgEditarAdmin" style="margin-top: 10px; font-weight: bold;"></div>
-            <div class="row-actions" style="margin-top: 15px;">
-                <button type="button" id="btnGuardarEditarAdmin">Guardar cambios</button>
+
+            <div id="modalEditarAlumno" class="hidden"
+                style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px;">
+                <div
+                    style="background: white; border-radius: 10px; max-width: 700px; width: 100%; max-height: 88vh; overflow-y: auto; padding: 25px;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="margin: 0; color: var(--primary);">Editar Seminario</h3>
+                        <button type="button" id="btnCerrarEditarAlumno"
+                            style="background: #4b5563; color: white; border: none; border-radius: 6px; padding: 6px 12px; cursor: pointer;">✕</button>
+                    </div>
+
+                    <input type="hidden" id="editSeminarioId" />
+                    <input type="hidden" id="edit_id_estudiante" />
+
+                    <fieldset style="border: 1px solid var(--border); border-radius: 8px; margin-bottom: 15px;">
+                        <legend>Datos del seminario</legend>
+                        <div class="grid">
+                            <div style="grid-column: 1 / -1;">
+                                <label for="edit_titulo">Título del proyecto</label>
+                                <input type="text" id="edit_titulo" required />
+                            </div>
+                            <div>
+                                <label for="edit_tipo_seminario">Seminario</label>
+                                <select id="edit_tipo_seminario" required>
+                                    <option value="" selected disabled>Selecciona un programa primero</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="edit_modalidad">Modalidad</label>
+                                <select id="edit_modalidad" required>
+                                    <option value="Presencial">Presencial</option>
+                                    <option value="Virtual">Virtual</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="edit_lugar_select">Aula / Modalidad del lugar</label>
+                                <select id="edit_lugar_select" required>
+                                    <option value="Raúl Limón">Aula Raúl Limón</option>
+                                    <option value="Fermín Carrillo">Aula Fermín Carrillo</option>
+                                    <option value="Virtual">Virtual (Google Meet / Zoom)</option>
+                                    <option value="Personalizado">Personalizado (escribir aula)</option>
+                                </select>
+                                <input type="text" id="edit_lugar_virtual" class="hidden" style="margin-top:6px;"
+                                    placeholder="Pega el enlace de Meet, Zoom, etc." />
+                                <input type="text" id="edit_lugar_personalizado" class="hidden" style="margin-top:6px;"
+                                    placeholder="Escribe el aula específica" />
+                            </div>
+                            <div>
+                                <label for="edit_duracion_select">Duración</label>
+                                <select id="edit_duracion_select" required>
+                                    <option value="30 min">30 min</option>
+                                    <option value="40 min">40 min</option>
+                                    <option value="60 min">60 min</option>
+                                    <option value="Personalizado">Personalizado</option>
+                                </select>
+                                <input type="text" id="edit_duracion_personalizada" class="hidden"
+                                    style="margin-top:6px;" placeholder="Ej. 45 min, 90 min..." />
+                            </div>
+                            <div>
+                                <label for="edit_fecha">Fecha</label>
+                                <input type="date" id="edit_fecha" required>
+                            </div>
+                            <div>
+                                <label for="edit_hora">Hora</label>
+                                <input type="time" id="edit_hora" required>
+                            </div>
+                            <div>
+                                <label for="edit_presidente">Presidente del jurado (Opcional)</label>
+                                <input type="text" id="edit_presidente" />
+                            </div>
+                            <div>
+                                <label for="edit_secretario">Secretario (Opcional)</label>
+                                <input type="text" id="edit_secretario" />
+                            </div>
+                            <div>
+                                <label for="edit_vocal">Vocal (Opcional)</label>
+                                <input type="text" id="edit_vocal" />
+                            </div>
+                            <div>
+                                <label for="edit_observaciones">Observaciones (Opcional)</label>
+                                <input type="text" id="edit_observaciones" />
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <div id="msgEditarAlumno" style="margin-top: 10px; font-weight: bold;"></div>
+                    <div class="row-actions" style="margin-top: 15px;">
+                        <button type="button" id="btnGuardarEditarAlumno">Guardar cambios del seminario</button>
+                    </div>
+                </div>
             </div>
-        </div>
-    </div>
 
-    <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border);">
-      <button id="btnLogout" class="btn-logout" type="button">Cerrar sesión</button>
-    </div>
+            <!-- MODAL DETALLES DE LA AGENDA -->
+            <div id="modalDetallesAgenda" class="hidden"
+                style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px;">
+                <div style="background: white; border-radius: 10px; max-width: 500px; width: 100%; padding: 25px;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="margin: 0; color: var(--primary);">Detalles del evento</h3>
+                        <button type="button" id="btnCerrarDetallesAgenda"
+                            style="background: #4b5563; color: white; border: none; border-radius: 6px; padding: 6px 12px; cursor: pointer;">✕</button>
+                    </div>
+                    <div id="contenidoDetallesAgenda" style="line-height: 1.6; color: var(--text);">
+                    </div>
+                </div>
+            </div>
 
-  </main>
+            <!-- modal seleccionar alumno existente -->
+            <div id="modalSeleccionAlumno" class="hidden"
+                style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px;">
+                <div
+                    style="background: white; border-radius: 10px; max-width: 600px; width: 100%; max-height: 80vh; overflow-y: auto; padding: 25px;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h3 style="margin: 0; color: var(--primary);">Seleccionar alumno</h3>
+                        <button type="button"
+                            onclick="document.getElementById('modalSeleccionAlumno').classList.add('hidden')"
+                            style="background: #4b5563; color: white; border: none; border-radius: 6px; padding: 6px 12px; cursor: pointer;">✕</button>
+                    </div>
+                    <input type="text" id="buscadorSeleccion" placeholder="🔍 Buscar alumno por nombre o control..."
+                        style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border); margin-bottom: 10px;">
 
-  <script src="./js/usuario.js"></script>
-</body>
+                    <div class="table-scroll-container">
+                        <table style="width: 100%; text-align: left; border-collapse: collapse; table-layout: fixed;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid #ccc;">
+                                    <th style="width: 45%; padding: 8px;">Nombre</th>
+                                    <th style="width: 30%; padding: 8px;">No. Control</th>
+                                    <th style="width: 25%; padding: 8px; text-align: center;">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaSeleccionBody"></tbody>
+                        </table>
+                    </div>
 
-</html>
+                </div>
+            </div>
+
+            <!-- MODAL EDITAR PERFIL ADMIN -->
+            <div id="modalEditarAdmin" class="hidden"
+                style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px;">
+                <div style="background: white; border-radius: 10px; max-width: 400px; width: 100%; padding: 25px;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="margin: 0; color: var(--primary);">Mis datos de administrador</h3>
+                        <button type="button" id="btnCerrarEditarAdmin"
+                            style="background: #4b5563; color: white; border: none; border-radius: 6px; padding: 6px 12px; cursor: pointer;">✕</button>
+                    </div>
+                    <div class="grid" style="grid-template-columns: 1fr;">
+                        <div>
+                            <label for="editAdminUsuario">Nuevo usuario (opcional)</label>
+                            <input type="text" id="editAdminUsuario"
+                                placeholder="Dejar en blanco para conservar el actual" />
+                        </div>
+
+                        <div>
+                            <label for="editAdminPass">Nueva contraseña (opcional)</label>
+                            <div class="password-container">
+                                <input type="password" id="editAdminPass"
+                                    placeholder="Dejar en blanco para conservar la actual" />
+                                <button type="button" class="btn-toggle-password" tabindex="-1"
+                                    title="Mostrar contraseña">👁️</button>
+                            </div>
+                            <small style="color: #6b7280; font-size: 0.8rem;">La contraseña debe tener al menos 8
+                                caracteres</small>
+                        </div>
+
+                    </div>
+                    <div id="msgEditarAdmin" style="margin-top: 10px; font-weight: bold;"></div>
+                    <div class="row-actions" style="margin-top: 15px;">
+                        <button type="button" id="btnGuardarEditarAdmin">Guardar cambios</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODAL OPCIONES DE DESCARGA PDF -->
+            <div id="modalOpcionesDescargaPDF" class="hidden"
+                style="position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 2200; display: flex; align-items: center; justify-content: center; padding: 20px;">
+                <div
+                    style="background: white; border-radius: 12px; max-width: 450px; width: 100%; padding: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); text-align: center;">
+                    <h3 style="margin: 0 0 10px 0; color: var(--primary); font-size: 1.4rem;">Opciones de Descarga</h3>
+                    <p style="color: #4b5563; margin-bottom: 20px;">Selecciona cómo deseas descargar los archivos PDF de
+                        las evaluaciones.</p>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <button type="button" id="btnDescargaCombinada"
+                            style="background: var(--ok); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1rem; transition: background 0.2s;"
+                            onmouseover="this.style.background='#15803d'"
+                            onmouseout="this.style.background='var(--ok)'">📄 Archivo Combinado (Todos en uno)</button>
+                        <button type="button" id="btnDescargaIndividual"
+                            style="background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1rem; transition: background 0.2s;"
+                            onmouseover="this.style.background='var(--primary-dark)'"
+                            onmouseout="this.style.background='var(--primary)'">📑 Archivos Individuales
+                            (Separados)</button>
+                        <button type="button"
+                            onclick="document.getElementById('modalOpcionesDescargaPDF').classList.add('hidden')"
+                            style="background: #e2e8f0; color: #475569; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: background 0.2s;"
+                            onmouseover="this.style.background='#cbd5e1'"
+                            onmouseout="this.style.background='#e2e8f0'">Cancelar</button>
+                    </div>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border);">
+                <button id="btnLogout" class="btn-logout" type="button">Cerrar sesión</button>
+            </div>
+
+        </main>
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"
+            integrity="sha512-XMVd28F1oH/O71fzwBnV7HucLxVwtxf26XV8P4wPk26EDxuGZ91N8bsOttmnomcCD3CS5ZMRL50H0GgOHvegtg=="
+            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+        <script src="./js/usuario.js"></script>
+    </body>
+
+    </html>

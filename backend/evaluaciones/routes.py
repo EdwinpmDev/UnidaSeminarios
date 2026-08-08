@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
 import jwt
+import json
 from flask import Blueprint, current_app, jsonify, make_response, request
 
 from config import DEBUG_MODE, JWT_SECRET
@@ -70,17 +71,20 @@ def guardar_evaluacion():
 
         data = request.get_json() or {}
         respuestas = []
+        respuestas_dict = {}
         for i in range(1, 13):
             valor = data.get(f"P{i}")
             if valor is None:
                 return jsonify({"success": False, "mensaje": f"Falta responder la pregunta P{i}"}), 400
             respuestas.append(float(valor))
+            respuestas_dict[f"P{i}"] = float(valor)
 
         calif_final = round(((sum(respuestas[0:8]) + (sum(respuestas[8:12]) * 2.0)) / 120.0) * 100, 1)
 
         session.add(Evaluacion(
             seminario_id=id_seminario, evaluador_nombre=token_data.get("nombre_evaluador", data.get("evaluador_nombre")),
-            evaluador_rol=evaluador_rol, calificacion_final=calif_final, comentarios=data.get("comentarios", "").strip()
+            evaluador_rol=evaluador_rol, calificacion_final=calif_final, comentarios=data.get("comentarios", "").strip(),
+            respuestas_detalle=json.dumps(respuestas_dict)
         ))
         session.commit()
 
@@ -123,7 +127,7 @@ def obtener_retroalimentacion(id_seminario):
         if not seminario:
             return jsonify({"success": False}), 404
 
-        evaluaciones = session.query(Evaluacion).filter_by(seminario_id=id_seminario).all()
+        evaluaciones = session.query(Evaluacion).filter_by(seminario_id=id_seminario).order_by(Evaluacion.fecha_evaluacion.asc()).all()
         roles_eval = {e.evaluador_rol for e in evaluaciones}
         jurado_asignado = parsear_jurado(seminario.jurado_texto)
 
@@ -135,7 +139,17 @@ def obtener_retroalimentacion(id_seminario):
                 rol: {"codigo": getattr(seminario, f"clave_{rol.lower()}") if rol not in roles_eval else None, "nombre": jurado_asignado.get(rol, "")}
                 for rol in ["Presidente", "Secretario", "Vocal"]
             },
-            "evaluaciones": [{"rol": e.evaluador_rol, "nombre": e.evaluador_nombre, "calificacion": e.calificacion_final, "comentarios": e.comentarios} for e in evaluaciones]
+            "evaluaciones": [
+                {
+                    "id": e.id,
+                    "rol": e.evaluador_rol, 
+                    "nombre": e.evaluador_nombre, 
+                    "calificacion": e.calificacion_final, 
+                    "comentarios": e.comentarios,
+                    "fecha": e.fecha_evaluacion.strftime("%Y-%m-%d %H:%M") if e.fecha_evaluacion else "",
+                    "respuestas": json.loads(e.respuestas_detalle) if e.respuestas_detalle else None
+                } for e in evaluaciones
+            ]
         }), 200
     finally:
         session.close()

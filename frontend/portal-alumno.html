@@ -23,13 +23,10 @@
         <p>Consulta los detalles de tu seminario y evaluación</p>
     </header>
 
-<main class="container">
+    <main class="container">
 
         <div style="text-align: right; margin-bottom: 15px;">
-            <button
-                type="button"
-                class="btn-logout"
-                onclick="window.location.href='/logout'">
+            <button type="button" class="btn-logout" onclick="window.location.href='/logout'">
                 Cerrar sesión
             </button>
         </div>
@@ -40,10 +37,18 @@
                 📋 Datos del estudiante
             </h2>
             <div class="grid" style="margin-top: 15px;">
-                <div><label>Nombre:</label><p id="lbl-nombre" style="font-weight: bold;">---</p></div>
-                <div><label>No. Control:</label><p id="lbl-usuarioAlumno">---</p></div>
-                <div><label>Correo:</label><p id="lbl-correo">---</p></div>
-                <div><label>Programa:</label><p id="lbl-programa">---</p></div>
+                <div><label>Nombre:</label>
+                    <p id="lbl-nombre" style="font-weight: bold;">---</p>
+                </div>
+                <div><label>No. Control:</label>
+                    <p id="lbl-usuarioAlumno">---</p>
+                </div>
+                <div><label>Correo:</label>
+                    <p id="lbl-correo">---</p>
+                </div>
+                <div><label>Programa:</label>
+                    <p id="lbl-programa">---</p>
+                </div>
             </div>
         </section>
 
@@ -174,12 +179,12 @@
                 el.style.display = 'block';
                 headerEl.style.paddingBottom = '15px';
                 headerEl.style.borderBottom = '2px solid var(--accent)';
-                if(icon) icon.textContent = '▲';
+                if (icon) icon.textContent = '▲';
             } else {
                 el.style.display = 'none';
                 headerEl.style.paddingBottom = '0';
                 headerEl.style.borderBottom = 'none';
-                if(icon) icon.textContent = '▼';
+                if (icon) icon.textContent = '▼';
             }
         }
     </script>

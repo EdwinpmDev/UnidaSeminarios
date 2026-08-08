@@ -17,13 +17,19 @@
 }
 
 /* Evita que texto largo (comentarios, proyectos, enlaces) se salga de sus contenedores */
-   
-p, td, th, li, span, div, label {
+
+p,
+td,
+th,
+li,
+span,
+div,
+label {
     overflow-wrap: anywhere;
     word-break: break-word;
 }
 
-/* Caja de texto con desplazamiento dependiendo de la cantidad de texto */ 
+/* Caja de texto con desplazamiento dependiendo de la cantidad de texto */
 .texto-scroll {
     max-height: 170px;
     overflow-y: auto;
@@ -355,27 +361,30 @@ button[disabled] {
     color: var(--error);
     font-size: .9rem;
     margin-top: 8px;
-    }
+}
 
 
 /* --- Estilos para botón de ver contraseña --- */
 .password-container {
     position: relative;
-    display: block; /* Mantenemos display block para respetar la estructura original */
+    display: block;
+    /* Mantenemos display block para respetar la estructura original */
     width: 100%;
 }
 
 .password-container input {
     width: 100%;
     /* Mantenemos el padding original de tu diseño (10px 12px) pero le damos extra a la derecha */
-    padding-right: 40px !important; 
+    padding-right: 40px !important;
 }
 
 .btn-toggle-password {
     position: absolute;
-    right: 8px; /* Pegado a la derecha, dentro del input */
+    right: 8px;
+    /* Pegado a la derecha, dentro del input */
     top: 50%;
-    transform: translateY(-50%); /* Centrado verticalmente exacto */
+    transform: translateY(-50%);
+    /* Centrado verticalmente exacto */
     background: transparent;
     border: none;
     color: var(--muted);
@@ -396,4 +405,21 @@ button[disabled] {
 
 .btn-toggle-password:active {
     transform: translateY(-50%) !important;
+}
+
+/* Estilos para la tabla de selección de alumnos */
+.table-scroll-container {
+    overflow-x: auto;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+#tablaSeleccionBody tr td {
+    padding: 10px 8px;
+    vertical-align: middle;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+#tablaSeleccionBody tr:hover {
+    background: #f8fafc;
 }

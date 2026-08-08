@@ -279,6 +279,8 @@ def obtener_estudiantes():
 
                 jurado = parsear_jurado(s.jurado_texto)
 
+                evals_det = [{"rol": e.evaluador_rol, "calificacion": e.calificacion_final} for e in evals]
+
                 sems_list.append({
                     "id_seminario": s.id, "proyecto": s.proyecto, "tipo_seminario": s.tipo_seminario,
                     "clave_acceso": s.clave_acceso, "calificacion": promedio_str, "es_evaluado": es_evaluado,
@@ -287,7 +289,8 @@ def obtener_estudiantes():
                     "clave_vocal": s.clave_vocal, "vocal": jurado.get("Vocal", ""),
                     "calificacion": promedio_str, "es_evaluado": es_evaluado,
                     "fecha": str(s.fecha) if s.fecha else "", "hora": s.hora.strftime("%H:%M") if s.hora else "",
-                    "lugar": s.lugar or "", "modalidad": s.modalidad or ""
+                    "lugar": s.lugar or "", "modalidad": s.modalidad or "",
+                    "evaluaciones_detalle": evals_det
                 })
 
             sems_list.sort(key=lambda x: x['fecha'], reverse=True)

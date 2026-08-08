@@ -1,15 +1,18 @@
+import zipfile
+
 from io import BytesIO
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import openpyxl
-from flask import Blueprint, current_app, jsonify, make_response, request
+from flask import Blueprint, current_app, jsonify, make_response, request, send_file
 from sqlalchemy import extract
 from sqlalchemy.orm import selectinload
 
 from extensions import Session
-from models import Estudiante, Seminario, UsuarioEvaluador
+from models import Estudiante, Seminario, UsuarioEvaluador, Evaluacion
 from utils import aplicar_formato_excel, parsear_jurado
+from reportes.pdf_generator import construir_ev_dict, renderizar_pdf, nombre_archivo_evaluacion
 
 from auth.decorators import admin_requerido, token_requerido
 
@@ -218,3 +221,88 @@ def descargar_docentes():
         return respuesta
     finally:
         session.close()
+
+
+@reportes_bp.route("/evaluacion-pdf/<int:id_evaluacion>", methods=["GET"])
+@token_requerido
+def evaluacion_pdf(id_evaluacion):
+    session = Session()
+    try:
+        evaluacion = session.query(Evaluacion).filter_by(id=id_evaluacion).first()
+        if not evaluacion:
+            return jsonify({"success": False, "mensaje": "Evaluación no encontrada"}), 404
+        pdf_io = renderizar_pdf([construir_ev_dict(evaluacion)])
+        return send_file(
+            pdf_io,
+            mimetype="application/pdf",
+            as_attachment=True,
+            download_name=nombre_archivo_evaluacion(evaluacion),
+        )
+    finally:
+        session.close()
+
+@reportes_bp.route("/evaluaciones-pdf/<int:id_seminario>", methods=["GET"])
+@token_requerido
+def evaluaciones_pdf_seminario(id_seminario):
+    rol_filtro = request.args.get("rol", "todos")
+    session = Session()
+    try:
+        query = session.query(Evaluacion).filter_by(seminario_id=id_seminario)
+        if rol_filtro != "todos":
+            query = query.filter_by(evaluador_rol=rol_filtro)
+        evaluaciones = query.order_by(Evaluacion.fecha_evaluacion.asc()).all()
+
+        if not evaluaciones:
+            return jsonify({"success": False, "mensaje": "No hay evaluaciones para generar el PDF"}), 404
+
+        pdf_io = renderizar_pdf([construir_ev_dict(e) for e in evaluaciones])
+
+        return send_file(
+            pdf_io,
+            mimetype="application/pdf",
+            as_attachment=True,
+            download_name=f"Compendio_Evaluaciones_{rol_filtro}.pdf",
+        )
+    finally:
+        session.close()
+
+
+@reportes_bp.route("/evaluaciones-zip/<int:id_seminario>", methods=["GET"])
+@token_requerido
+def evaluaciones_zip_seminario(id_seminario):
+    rol_filtro = request.args.get("rol", "todos")
+    session = Session()
+    try:
+        query = session.query(Evaluacion).filter_by(seminario_id=id_seminario)
+        if rol_filtro != "todos":
+            query = query.filter_by(evaluador_rol=rol_filtro)
+        evaluaciones = query.order_by(Evaluacion.fecha_evaluacion.asc()).all()
+
+        if not evaluaciones:
+            return jsonify({"success": False, "mensaje": "No hay evaluaciones para generar el PDF"}), 404
+
+        zip_io = BytesIO()
+        nombres_usados = {}
+        with zipfile.ZipFile(zip_io, "w", zipfile.ZIP_DEFLATED) as zf:
+            for evaluacion in evaluaciones:
+                pdf_io = renderizar_pdf([construir_ev_dict(evaluacion)])
+
+                base = nombre_archivo_evaluacion(evaluacion).replace(".pdf", "")
+                nombre_final, contador = base, 2
+                while nombre_final in nombres_usados:
+                    nombre_final = f"{base}_{contador}"
+                    contador += 1
+                nombres_usados[nombre_final] = True
+
+                zf.writestr(f"{nombre_final}.pdf", pdf_io.getvalue())
+
+        zip_io.seek(0)
+        return send_file(
+            zip_io,
+            mimetype="application/zip",
+            as_attachment=True,
+            download_name=f"Evaluaciones_Individuales_{rol_filtro}.zip",
+        )
+    finally:
+        session.close()
+

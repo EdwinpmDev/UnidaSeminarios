@@ -66,6 +66,7 @@ class Evaluacion(Base):
     evaluador_rol = Column(String(50), nullable=False)
     calificacion_final = Column(Float, nullable=False)
     comentarios = Column(Text, nullable=False)
+    respuestas_detalle = Column(Text, nullable=True)
     fecha_evaluacion = Column(DateTime, default=lambda: datetime.now(ZoneInfo("America/Mexico_City")))
 
     seminario = relationship("Seminario", back_populates="evaluaciones")

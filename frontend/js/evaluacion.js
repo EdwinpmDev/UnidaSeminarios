@@ -30,7 +30,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
         const res = await fetch(`${API_BASE}/datos-evaluacion`);
         const data = await res.json();
-        
+
         if (data.success) {
             seminarioData = data.datos;
             if (seminarioData.rol_evaluador) {
@@ -94,7 +94,7 @@ function verificarFormularioIdentificacion() {
 function mostrarFormularioConRol(rol, nombre) {
     gatePosicion.classList.add('hidden');
     tarjetaEvaluacion.classList.remove('hidden');
-    
+
     document.getElementById('evaluador_rol_fijo').value = rol;
     document.getElementById('display-nombre-evaluador').textContent = nombre;
 
@@ -109,7 +109,7 @@ function prellenarDatos() {
     // Rellenamos el paso 1
     const select = document.getElementById('select-evaluado');
     select.innerHTML = `<option value="${seminarioData.id_seminario}" selected>${seminarioData.nombre_estudiante} — Proyecto: ${seminarioData.proyecto.substring(0, 40)}...</option>`;
-    
+
     document.getElementById('proyecto_titulo').value = seminarioData.proyecto;
     document.getElementById('proyecto_programa').value = seminarioData.programa;
 
@@ -131,7 +131,7 @@ function prellenarDatos() {
 
 function construirQuest(containerId, min, max, maxEscala) {
     const container = document.getElementById(containerId);
-    container.innerHTML = ''; 
+    container.innerHTML = '';
     for (let i = min; i <= max; i++) {
         let optionsHtml = '';
         for (let j = 1; j <= maxEscala; j++) {
@@ -167,7 +167,7 @@ function validarComentarios() {
 
 async function enviarEvaluacionCompleta(event) {
     event.preventDefault();
-    
+
     const btnSubmit = document.getElementById('btn-enviar-todo');
     btnSubmit.disabled = true;
     btnSubmit.textContent = "Guardando Evaluación...";

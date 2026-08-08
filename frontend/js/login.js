@@ -21,11 +21,11 @@ function conmutarSubFormulario(subRol) {
 async function manejarLogin(e, destino) {
     e.preventDefault();
     const form = e.target;
-    
+
     const user = form.querySelector('input[name="username"]').value.trim();
     const passInput = form.querySelector('#pass-profesor');
     const pass = passInput ? passInput.value.trim() : '';
-    
+
     const btnSubmit = form.querySelector('.btn-submit');
     const errorBox = form.querySelector('.login-error');
 
@@ -55,17 +55,17 @@ async function manejarLogin(e, destino) {
         if (data.success) {
             window.location.href = destino;
         } else {
-            if (errorBox) { 
-                errorBox.textContent = '⚠️ ' + data.mensaje; 
-                errorBox.classList.remove('hidden'); 
+            if (errorBox) {
+                errorBox.textContent = '⚠️ ' + data.mensaje;
+                errorBox.classList.remove('hidden');
             } else {
                 alert('⚠️ ' + data.mensaje);
             }
         }
     } catch (error) {
-        if (errorBox) { 
-            errorBox.textContent = '⚠️ Error de conexión.'; 
-            errorBox.classList.remove('hidden'); 
+        if (errorBox) {
+            errorBox.textContent = '⚠️ Error de conexión.';
+            errorBox.classList.remove('hidden');
         } else {
             alert('⚠️ Error de conexión.');
         }
@@ -79,11 +79,11 @@ async function manejarLogin(e, destino) {
 async function manejarLoginEstudiante(e, destino) {
     e.preventDefault();
     const form = e.target;
-    
+
     const user = form.querySelector('input[name="username"]').value.trim();
     const passInput = form.querySelector('#pass-estudiante');
     const pass = passInput ? passInput.value.trim() : '';
-    
+
     const btnSubmit = form.querySelector('.btn-submit');
     const errorBox = form.querySelector('.login-error');
 
@@ -113,17 +113,17 @@ async function manejarLoginEstudiante(e, destino) {
         if (data.success) {
             window.location.href = destino;
         } else {
-            if (errorBox) { 
-                errorBox.textContent = '⚠️ ' + data.mensaje; 
-                errorBox.classList.remove('hidden'); 
+            if (errorBox) {
+                errorBox.textContent = '⚠️ ' + data.mensaje;
+                errorBox.classList.remove('hidden');
             } else {
                 alert('⚠️ ' + data.mensaje);
             }
         }
     } catch (error) {
-        if (errorBox) { 
-            errorBox.textContent = '⚠️ Error de conexión.'; 
-            errorBox.classList.remove('hidden'); 
+        if (errorBox) {
+            errorBox.textContent = '⚠️ Error de conexión.';
+            errorBox.classList.remove('hidden');
         } else {
             alert('⚠️ Error de conexión.');
         }
@@ -167,7 +167,7 @@ document.addEventListener("DOMContentLoaded", () => {
             e.preventDefault();
             const code = document.getElementById('code-evaluador').value.trim();
             const btnSubmit = formEvaluador.querySelector('.btn-submit');
-            
+
             if (!code) {
                 alert('Por favor ingresa la clave de acceso al seminario.');
                 return;
@@ -182,7 +182,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ seminar_code: code })
                 });
-                
+
                 const data = await response.json();
 
                 if (data.success) {
@@ -208,9 +208,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const togglePasswordBtns = document.querySelectorAll('.btn-toggle-password');
 
     togglePasswordBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
+        btn.addEventListener('click', function () {
             const input = this.previousElementSibling;
-            
+
             if (input.type === 'password') {
                 input.type = 'text';
                 this.textContent = '🔒';
