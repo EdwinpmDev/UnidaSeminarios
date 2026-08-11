@@ -113,5 +113,5 @@ if __name__ == "__main__":
     crear_usuario_administrador_inicial()
     
     from waitress import serve
-    print("🚀 Servidor en ejecución (Waitress) multiplataforma")
+    print("🚀 Servidor en ejecución (Waitress) multiplataforma http://127.0.0.1:5000")
     serve(app, host="0.0.0.0", port=5000)
