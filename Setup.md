@@ -2,6 +2,14 @@
 
 ## Instalación en máquina nueva
 
+### Requisito previo (Solo para usuarios de Windows)
+El sistema utiliza la librería WeasyPrint para generar las cédulas de evaluación en formato PDF. Para que funcione en Windows, es **obligatorio** instalar las librerías gráficas GTK3 en el sistema operativo:
+
+1. Descarga el instalador más reciente de **GTK3 Runtime**
+2. Ejecuta el instalador
+3. **¡Importante!** Durante la instalación, asegúrate de marcar la casilla que dice **"Set up PATH environment variable to include GTK+"**. Si no marcas esta opción, el sistema no encontrará la librería.
+4. Una vez instalado, debes reiniciar tu terminal o editor de codigo.
+
 ### 1. Clonar el repositorio
 ```bash
 git clone <repo>

@@ -1,4 +1,5 @@
 import logging
+import sys
 import os
 from logging.handlers import RotatingFileHandler
 
@@ -110,6 +111,7 @@ app = crear_app()
 
 if __name__ == "__main__":
     crear_usuario_administrador_inicial()
-    # Para producción, usar Gunicorn en lugar de app.run()
-    # Pero si usas app.run(), quita el debug
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    
+    from waitress import serve
+    print("🚀 Servidor en ejecución (Waitress) multiplataforma")
+    serve(app, host="0.0.0.0", port=5000)
