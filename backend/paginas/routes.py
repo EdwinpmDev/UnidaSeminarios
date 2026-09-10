@@ -1,15 +1,17 @@
 import jwt
 from flask import Blueprint, redirect, request, send_from_directory
 
+from auth.decorators import token_esta_revocado
 from config import FRONTEND_PATH, JWT_SECRET
 
 paginas_bp = Blueprint("paginas", __name__)
 
 PAGINAS_PROTEGIDAS = {
-    'usuario.html': None,
-    'index.html': None,
-    'portal-alumno.html': None,
-    'evaluacion.html': None,
+    'usuario.html',
+    'index.html',
+    'portal-alumno.html',
+    'evaluacion.html',
+    'dashboard-docente.html',
 }
 
 
@@ -26,8 +28,8 @@ def static_files(path):
             return redirect('/')
         try:
             data = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
-            if PAGINAS_PROTEGIDAS[path] == 'admin' and not data.get('is_admin'):
-                return redirect('/')
         except jwt.InvalidTokenError:
+            return redirect('/')
+        if token_esta_revocado(data.get('jti')):
             return redirect('/')
     return send_from_directory(FRONTEND_PATH, path)

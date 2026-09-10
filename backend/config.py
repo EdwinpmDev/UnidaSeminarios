@@ -29,3 +29,9 @@ CORS_ORIGINS = [
     "http://localhost:5000",
     "http://192.168.100.11:5000",
 ]
+
+CORS_ORIGINS_EXTRA = os.getenv("CORS_ORIGINS_EXTRA", "")
+if CORS_ORIGINS_EXTRA:
+    CORS_ORIGINS += [origen.strip() for origen in CORS_ORIGINS_EXTRA.split(",") if origen.strip()]
+
+NUM_PROXIES = int(os.getenv("NUM_PROXIES", "0"))

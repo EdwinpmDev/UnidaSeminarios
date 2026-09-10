@@ -6,12 +6,12 @@ from zoneinfo import ZoneInfo
 
 import openpyxl
 from flask import Blueprint, current_app, jsonify, make_response, request, send_file
-from sqlalchemy import extract
+from sqlalchemy import extract, func
 from sqlalchemy.orm import selectinload
 
 from extensions import Session
 from models import Estudiante, Seminario, UsuarioEvaluador, Evaluacion
-from utils import aplicar_formato_excel, parsear_jurado
+from utils import aplicar_formato_excel, calcular_ventana_evaluacion, parsear_jurado, sanitizar_celda_excel
 from reportes.pdf_generator import construir_ev_dict, renderizar_pdf, nombre_archivo_evaluacion
 
 from auth.decorators import admin_requerido, token_requerido
@@ -22,32 +22,49 @@ reportes_bp = Blueprint("reportes", __name__)
 @reportes_bp.route("/descargar-reporte", methods=["GET"])
 @token_requerido
 def descargar_reporte():
+    programa_filtro = request.args.get('programa', 'todos').strip()
+    fase_filtro = request.args.get('fase', 'todos').strip()
+
     session = Session()
     try:
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = "Directorio de alumnos"
 
-        ws.append(['No. Control', 'Nombre de alumno', 'Seminarios activos', 'Seminarios evaluados', 'Proyectos Registrados'])
+        ws.append(['No. Control', 'Nombre de alumno', 'Programa', 'Seminarios activos', 'Seminarios evaluados', 'Proyectos Registrados'])
 
-        estudiantes = session.query(Estudiante).options(
+        query = session.query(Estudiante).options(
             selectinload(Estudiante.seminarios).selectinload(Seminario.evaluaciones)
-        ).all()
+        )
+
+        if programa_filtro != 'todos':
+            query = query.filter(Estudiante.programa == programa_filtro)
+        if fase_filtro != 'todos':
+            query = query.filter(Estudiante.seminarios.any(Seminario.tipo_seminario == fase_filtro))
+
+        estudiantes = query.all()
         for est in estudiantes:
             activos = 0
             evaluados = 0
             nombres_proyectos = []
             for s in est.seminarios:
                 nombres_proyectos.append(s.proyecto)
-                evals = s.evaluaciones
-                if len(evals) >= 3:
+                plazo_vencido = calcular_ventana_evaluacion(s)["estado"] == "caducado"
+                if plazo_vencido:
                     evaluados += 1
                 else:
                     activos += 1
 
             proyectos_str = " | ".join(nombres_proyectos) if nombres_proyectos else "Sin proyectos"
 
-            ws.append([est.usuarioAlumno, est.nombre, activos, evaluados, proyectos_str])
+            ws.append([
+                sanitizar_celda_excel(est.usuarioAlumno),
+                sanitizar_celda_excel(est.nombre),
+                sanitizar_celda_excel(est.programa),
+                activos,
+                evaluados,
+                sanitizar_celda_excel(proyectos_str),
+            ])
 
         aplicar_formato_excel(ws)
 
@@ -96,7 +113,16 @@ def descargar_agenda():
                 continue
 
             hora_str = s.hora.strftime('%H:%M') if s.hora else 'Sin hora'
-            ws.append([str(s.fecha), hora_str, s.lugar, s.modalidad, s.estudiante.nombre, s.estudiante.usuarioAlumno, s.tipo_seminario, s.proyecto])
+            ws.append([
+                str(s.fecha),
+                hora_str,
+                sanitizar_celda_excel(s.lugar),
+                sanitizar_celda_excel(s.modalidad),
+                sanitizar_celda_excel(s.estudiante.nombre),
+                sanitizar_celda_excel(s.estudiante.usuarioAlumno),
+                sanitizar_celda_excel(s.tipo_seminario),
+                sanitizar_celda_excel(s.proyecto),
+            ])
 
         aplicar_formato_excel(ws)
 
@@ -138,7 +164,6 @@ def agenda_paginada():
         total_records = query.count()
         has_more = (page * per_page) < total_records
 
-        # Ordenamos los seminarios más recientes primero
         seminarios_bd = query.order_by(Seminario.fecha.asc(), Seminario.hora.asc()).offset((page - 1) * per_page).limit(per_page).all()
 
         eventos = []
@@ -151,7 +176,6 @@ def agenda_paginada():
 
             jurado = parsear_jurado(sem.jurado_texto)
 
-            # Calcular estado de plazo
             estado_plazo = "Activo"
             if sem.fecha and sem.hora:
                 fecha_inicio = datetime.combine(sem.fecha, sem.hora).replace(tzinfo=ZoneInfo("America/Mexico_City"))
@@ -195,6 +219,26 @@ def agenda_paginada():
         session.close()
 
 
+@reportes_bp.route("/agenda-anios-disponibles", methods=["GET"])
+@token_requerido
+def agenda_anios_disponibles():
+    session = Session()
+    try:
+        anio_minimo, anio_maximo = session.query(
+            func.min(extract('year', Seminario.fecha)),
+            func.max(extract('year', Seminario.fecha))
+        ).filter(Seminario.fecha.isnot(None)).first()
+
+        anio_actual = datetime.now(ZoneInfo("America/Mexico_City")).year
+        return jsonify({
+            "success": True,
+            "anio_minimo": int(anio_minimo) if anio_minimo else anio_actual,
+            "anio_maximo": int(anio_maximo) if anio_maximo else anio_actual
+        }), 200
+    finally:
+        session.close()
+
+
 @reportes_bp.route("/descargar-docentes", methods=["GET"])
 @admin_requerido
 def descargar_docentes():
@@ -207,7 +251,7 @@ def descargar_docentes():
 
         docentes = session.query(UsuarioEvaluador).filter_by(es_admin=False).all()
         for d in docentes:
-            ws.append([d.id, d.nombre_completo, d.usuario])
+            ws.append([d.id, sanitizar_celda_excel(d.nombre_completo), sanitizar_celda_excel(d.usuario)])
 
         aplicar_formato_excel(ws)
 
@@ -305,4 +349,3 @@ def evaluaciones_zip_seminario(id_seminario):
         )
     finally:
         session.close()
-

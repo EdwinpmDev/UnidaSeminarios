@@ -182,6 +182,13 @@ main {
     transition: border-color 0.2s;
 }
 
+.form-hint {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.78rem;
+    color: var(--muted);
+}
+
 .input-group input:focus {
     outline: none;
     border-color: var(--primary);
@@ -223,6 +230,7 @@ main {
     cursor: pointer;
     text-decoration: underline;
     transition: color 0.2s;
+    text-align: center;
 }
 
 .btn-switch-link:hover {
@@ -285,4 +293,61 @@ footer {
 
 .btn-toggle-password:hover {
     color: var(--primary);
+}
+
+/* --- Modal de Aviso --- */
+#modalAvisoGlobal.hidden {
+    display: none;
+}
+
+#modalAvisoGlobal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 15px;
+    z-index: 1000;
+}
+
+#modalAvisoGlobal .modal-content {
+    background: #ffffff;
+    padding: 25px;
+    border-radius: 10px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15);
+    border-top: 4px solid var(--primary);
+}
+
+.modal-aviso-texto {
+    color: var(--text);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin-bottom: 20px;
+    white-space: pre-line;
+}
+
+.modal-aviso-acciones {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.btn-aceptar-modal {
+    background: var(--primary);
+    color: #ffffff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 0.95rem;
+}
+
+.btn-aceptar-modal:hover {
+    background: var(--primary-dark);
 }

@@ -1,23 +1,17 @@
 import json
 from io import BytesIO
 
-from jinja2 import Template
+from jinja2 import Environment
 from weasyprint import HTML
 
-BANCO_PREGUNTAS = {
-    1: "Planteamiento del problema, justificación y definición clara de objetivos.",
-    2: "Dominio, rigor científico y profundidad conceptual del tema expuesto.",
-    3: "Metodología utilizada, materiales, desarrollo y consistencia de la investigación.",
-    4: "Resultados obtenidos, conclusiones alcanzadas o aportaciones esperadas.",
-    5: "Uso correcto del tiempo asignado para la exposición oral.",
-    6: "Claridad, fluidez, dicción y propiedad en la expresión oral.",
-    7: "Calidad de las diapositivas, recursos audiovisuales y herramientas de apoyo.",
-    8: "Organización, estructura y secuencia lógica de la presentación.",
-    9: "Estructura formal del reporte escrito entregado previamente.",
-    10: "Actualización, pertinencia y calidad de las referencias bibliográficas.",
-    11: "Cumplimiento del plan de trabajo y cronograma establecido.",
-    12: "Capacidad de respuesta y debate crítico ante las preguntas del sínodo.",
-}
+from utils import FASES_CALIFICACION_DIRECTA
+
+_env = Environment(autoescape=True)
+
+
+def _url_fetcher_bloqueado(url, *args, **kwargs):
+    raise ValueError(f"Carga de recursos externos bloqueada: {url}")
+
 
 CSS_BASE = """
 @page {
@@ -120,7 +114,7 @@ comentario es MUY largo, WeasyPrint permite que el bloque fluya a la
 }
 """
 
-_TEMPLATE_EVALUACION = Template("""
+_TEMPLATE_EVALUACION = _env.from_string("""
 <div class="evaluacion-completa">
     <h2>Cédula de Evaluación - {{ ev.rol }}</h2>
     <p class="info-seminario">
@@ -128,7 +122,23 @@ _TEMPLATE_EVALUACION = Template("""
         <strong>Etapa:</strong> {{ ev.etapa or 'N/A' }} &nbsp;|&nbsp;
         <strong>Evaluado:</strong> {{ ev.estudiante or 'N/A' }}
     </p>
-    {% if not ev.respuestas %}
+    {% if ev.es_directa %}
+        <div class="encabezado">
+            <div>
+                <p><strong>Evaluador:</strong> {{ ev.nombre }}</p>
+                <p><strong>Fecha:</strong> {{ ev.fecha or 'N/A' }}</p>
+            </div>
+            <div class="calificacion-final">
+                <p class="etiqueta">Calificación Directa</p>
+                <p class="valor">{{ ev.calificacion }} / 100</p>
+            </div>
+        </div>
+
+        <div class="comentarios">
+            <h4>Observaciones y retroalimentación:</h4>
+            <div class="caja">{{ ev.comentarios or 'Sin comentarios registrados.' }}</div>
+        </div>
+    {% elif not ev.respuestas or ev.respuestas is mapping %}
         <div class="encabezado">
             <div>
                 <p><strong>Evaluador:</strong> {{ ev.nombre }}</p>
@@ -151,20 +161,20 @@ _TEMPLATE_EVALUACION = Template("""
             </div>
         </div>
 
-        {% for i in range(1, 13) %}
-            {% if i == 1 %}<h4>I. Exposición Oral (Escala 1 al 10)</h4>{% endif %}
-            {% if i == 9 %}<h4>II. Reporte escrito y debate (Escala 1 al 5)</h4>{% endif %}
-            {% set max_escala = 10 if i <= 8 else 5 %}
-            {% set elegida = ev.respuestas.get('P' ~ i) %}
+        {% for r in ev.respuestas %}
+            {% if loop.first or r.escala_maxima != loop.previtem.escala_maxima %}
+                <h4>Escala 1 al {{ r.escala_maxima }}</h4>
+            {% endif %}
             <div class="pregunta-bloque">
-                <div class="pregunta-texto">P{{ i }}. {{ banco[i] }}</div>
+                <div class="pregunta-texto">P{{ loop.index }}. {{ r.texto }}</div>
                 <div class="opciones">
-                    {% for j in range(1, max_escala + 1) %}
-                        <div class="opcion {{ 'seleccionada' if elegida is not none and j == elegida|int else '' }}">{{ j }}</div>
+                    {% for j in range(1, r.escala_maxima + 1) %}
+                        <div class="opcion {{ 'seleccionada' if j == r.puntaje|int else '' }}">{{ j }}</div>
                     {% endfor %}
                 </div>
             </div>
         {% endfor %}
+
 
         <div class="comentarios">
             <h4>Observaciones y retroalimentación:</h4>
@@ -188,17 +198,19 @@ def construir_ev_dict(evaluacion):
         "proyecto": seminario.proyecto if seminario else "",
         "etapa": seminario.tipo_seminario if seminario else "",
         "estudiante": seminario.estudiante.nombre if seminario and seminario.estudiante else "",
+        "es_directa": seminario.tipo_seminario in FASES_CALIFICACION_DIRECTA if seminario else False,
     }
 
 
 def renderizar_pdf(evaluaciones_dicts):
     cuerpo = "\n".join(
-        _TEMPLATE_EVALUACION.render(ev=ev, banco=BANCO_PREGUNTAS)
+        _TEMPLATE_EVALUACION.render(ev=ev)
         for ev in evaluaciones_dicts
     )
     html_completo = f"<html><head><style>{CSS_BASE}</style></head><body>{cuerpo}</body></html>"
-    pdf_bytes = HTML(string=html_completo).write_pdf()
+    pdf_bytes = HTML(string=html_completo, url_fetcher=_url_fetcher_bloqueado).write_pdf()
     return BytesIO(pdf_bytes)
+
 
 
 def nombre_archivo_evaluacion(evaluacion):

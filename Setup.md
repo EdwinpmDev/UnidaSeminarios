@@ -10,6 +10,30 @@ El sistema utiliza la librería WeasyPrint para generar las cédulas de evaluaci
 3. **¡Importante!** Durante la instalación, asegúrate de marcar la casilla que dice **"Set up PATH environment variable to include GTK+"**. Si no marcas esta opción, el sistema no encontrará la librería.
 4. Una vez instalado, debes reiniciar tu terminal o editor de codigo.
 
+### Requisito previo (Solo para usuarios de Linux)
+WeasyPrint también necesita sus librerías del sistema en Linux (no vienen con `pip install`). En Debian/Ubuntu:
+
+```bash
+sudo apt update
+sudo apt install -y libpango-1.0-0 libpangocairo-1.0-0 libcairo2 libgdk-pixbuf2.0-0 libffi-dev shared-mime-info
+```
+
+En distros basadas en RHEL/CentOS/Fedora el paquete equivalente es `pango`, `cairo` y `gdk-pixbuf2`. Si al generar un PDF sale un error tipo `OSError: cannot load library`, casi siempre es que falta algo de este paso.
+
+Para confirmar que todo quedó bien instalado sin depender de generar una cédula real desde el sistema, correr:
+
+```bash
+python3 test_pdf_server.py
+```
+
+Revisa las tres librerías y genera un PDF de prueba en `/tmp/`. Sale con código 0 si todo está bien.
+
+Si el servidor de pruebas va a correr como servicio (systemd, supervisor, gunicorn detrás de nginx, etc.) en lugar de `python app.py` directo en una terminal: el usuario administrador **no se crea solo**, porque eso solo pasa en el bloque `if __name__ == "__main__"`. Después de levantar el servicio, correr una vez:
+
+```bash
+python scripts/restaurar_admin.py
+```
+
 ### 1. Clonar el repositorio
 ```bash
 git clone <repo>
@@ -54,7 +78,9 @@ Running on http://127.0.0.1:5000
 Si actualizas alguno de estos archivos del repositorio, reemplázalos:
 
 - `app.py` - Backend
-- `usuario.js` - Panel de administración
+- `config.py` - Configuración (CORS, proxy, etc.)
+- `usuario/` (módulos JS) / `usuario.html` - Panel de administración
+- `dashboard-docente.js` / `dashboard-docente.css` - Panel del docente
 - `evaluacion.js` - Sistema de evaluación
 - `login.js` - Autenticación
 - `requirements.txt` - Dependencias
@@ -64,6 +90,20 @@ Si actualizas alguno de estos archivos del repositorio, reemplázalos:
 - `.gitignore` - Configuración local
 
 ---
+
+## Despliegue con dominio o subdominio propio
+
+Cuando ya se sepa qué dominio/subdominio va a usar el servidor de pruebas, agregar estas dos variables al `.env` (no requieren tocar código):
+
+```
+CORS_ORIGINS_EXTRA=https://tu-subdominio.ejemplo.edu.mx
+NUM_PROXIES=1
+```
+
+- `CORS_ORIGINS_EXTRA` → el dominio real por el que va a entrar la gente. Se puede poner más de uno separados por coma.
+- `NUM_PROXIES` → poner `1` si el servidor está detrás de un proxy inverso (Nginx, Caddy, un balanceador, un panel tipo Plesk/cPanel con proxy, etc.), que es lo normal cuando hay HTTPS con dominio. Dejar en `0` si Flask/Waitress recibe las peticiones directo de internet, sin nada en medio.
+
+Si no se está seguro de si hay un proxy en medio, dejar `NUM_PROXIES=0` (el valor por defecto) y probar el login: si con varios usuarios entrando a la vez empieza a salir "Demasiados intentos" sin razón, es señal de que sí hay un proxy y hay que cambiarlo a `1`.
 
 ## Seguridad
 
@@ -118,9 +158,39 @@ Todos excepto `GET /estudiantes` requieren token JWT en header:
 Authorization: Bearer <token>
 ```
 
-## 💾 Respaldos y mantenimiento (Importante)
+## 💾 Backups automáticos
 
-El código de esta aplicación no realiza respaldos automáticos de la base de datos por sí solo, ya que esta tarea corresponde a la capa de infraestructura. 
+`backend/scripts/backup_db.py` respalda la base de datos usando las credenciales de `DATABASE_URL` del `.env`. Genera un dump comprimido en `backend/backups/`, y puede listar, restaurar o limpiar backups viejos.
 
-**Responsabilidad del administrador del servidor:**
-Para evitar la pérdida de información (alumnos, docentes, seminarios y calificaciones), la persona encargada de desplegar este sistema en la nube o en un servidor local **debe** habilitar una política de respaldos (Backups) automatizados diarios de la base de datos `unida_seminarios`.
+```bash
+cd backend/scripts
+python backup_db.py backup              # crea un backup nuevo
+python backup_db.py list                # lista backups con tamaño y fecha
+python backup_db.py restore              # restaura el más reciente
+python backup_db.py restore archivo.sql.gz   # restaura uno específico
+python backup_db.py clean                # borra backups con más de 30 días
+```
+
+El script no se ejecuta solo. Para que corra automáticamente, hay que agregarlo al `crontab` del servidor:
+
+```bash
+crontab -e
+```
+
+Y agregar una línea con la ruta completa al Python del entorno virtual:
+
+```
+0 3 * * * cd /ruta/al/proyecto/backend/scripts && /ruta/al/venv/bin/python backup_db.py backup && /ruta/al/venv/bin/python backup_db.py clean
+```
+
+Esto corre un backup y una limpieza todas las noches a las 3am. Sin este paso, el script solo sirve para correrlo a mano.
+
+## 🩺 Health Check
+
+`GET /health` verifica que el servidor esté corriendo y conectado a MySQL. Sirve para monitoreo externo (UptimeRobot, balanceadores, etc.) o para revisar rápido si un problema es de la app o de la base de datos.
+
+```bash
+curl http://127.0.0.1:5000/health
+```
+
+Responde `{"status": "ok", "timestamp": "..."}` con código 200 si todo está bien, o `"status": "error"` con código 503 si no logra conectarse a la BD.

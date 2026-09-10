@@ -368,13 +368,13 @@ button[disabled] {
 .password-container {
     position: relative;
     display: block;
-    /* Mantenemos display block para respetar la estructura original */
+    /* Mantencion de display block */
     width: 100%;
 }
 
 .password-container input {
     width: 100%;
-    /* Mantenemos el padding original de tu diseño (10px 12px) pero le damos extra a la derecha */
+    /* Mantener el padding original del diseño */
     padding-right: 40px !important;
 }
 
@@ -384,7 +384,7 @@ button[disabled] {
     /* Pegado a la derecha, dentro del input */
     top: 50%;
     transform: translateY(-50%);
-    /* Centrado verticalmente exacto */
+    /* Centrado verticalmente */
     background: transparent;
     border: none;
     color: var(--muted);
@@ -422,4 +422,67 @@ button[disabled] {
 
 #tablaSeleccionBody tr:hover {
     background: #f8fafc;
+}
+
+.modal-overlay {
+    align-items: center;
+    overflow: hidden;
+    padding: 15px;
+}
+
+.modal-content {
+    max-height: 85vh;
+    overflow-y: auto;
+}
+
+#tablaEstudiantesBody td, #tablaEstudiantesBody th, #tablaSeleccionBody td {
+    white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+    .row-actions { flex-direction: column; width: 100%; }
+    .row-actions button { width: 100%; margin-bottom: 5px; }
+    .filtro-mes { flex-direction: column; align-items: stretch; }
+    .filtro-mes input[type="month"] { width: 100%; margin-top: 8px; }
+    header { padding-top: 100px; }
+}
+
+/* --- Toast --- */
+#toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 2000;
+    pointer-events: none;
+}
+
+.toast {
+    background: #1f2937;
+    color: #ffffff;
+    padding: 12px 18px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.25);
+    max-width: 320px;
+    word-break: break-word;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    border-left: 4px solid var(--primary);
+}
+
+.toast-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.toast-exito {
+    border-left-color: #059669;
+}
+
+.toast-error {
+    border-left-color: #dc2626;
 }

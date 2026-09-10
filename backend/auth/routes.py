@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta, timezone
-from zoneinfo import ZoneInfo
 
 import jwt
 from flask import Blueprint, current_app, jsonify, make_response, redirect, request
@@ -8,9 +7,10 @@ from werkzeug.security import check_password_hash
 
 from config import DEBUG_MODE, JWT_SECRET
 from extensions import Session, limiter
-from models import Estudiante, Seminario, UsuarioEvaluador
+from models import Estudiante, Evaluacion, Seminario, UsuarioEvaluador
+from utils import VENTANA_EVALUACION_HORAS, calcular_ventana_evaluacion
 
-from .decorators import _decodificar_token, validar_json
+from .decorators import _decodificar_token, generar_csrf_token, generar_jti, limpiar_cookies_sesion, revocar_token, set_cookies_sesion, validar_json
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -20,13 +20,24 @@ def verificar_sesion():
     data, error = _decodificar_token()
     if error:
         return jsonify({"logueado": False}), 200
-    return jsonify({"logueado": True, "usuario": data.get('usuario'), "is_admin": data.get('is_admin', False)})
+    return jsonify({
+        "logueado": True,
+        "usuario": data.get('usuario'),
+        "nombre_completo": data.get('nombre_completo', data.get('usuario')),
+        "is_admin": data.get('is_admin', False)
+    })
 
 
 @auth_bp.route("/logout")
 def logout():
+    data, error = _decodificar_token()
+    if not error and data:
+        jti = data.get('jti')
+        exp = data.get('exp')
+        if jti and exp:
+            revocar_token(jti, datetime.fromtimestamp(exp, tz=timezone.utc))
     respuesta = redirect('/')
-    respuesta.set_cookie('unida_token', '', expires=0)
+    limpiar_cookies_sesion(respuesta)
     return respuesta
 
 
@@ -47,14 +58,20 @@ def login():
             current_app.logger.warning(f"intento de login docente fallido para el usuario: {usuario} desde {get_remote_address()}")
             return jsonify({"success": False, "mensaje": "Usuario o contraseña incorrectos"}), 401
 
+        csrf_token = generar_csrf_token()
         token_jwt = jwt.encode(
-            {"usuario": usuario_db.usuario, "is_admin": usuario_db.es_admin, "exp": datetime.now(timezone.utc) + timedelta(hours=8)},
+            {"usuario": usuario_db.usuario, "nombre_completo": usuario_db.nombre_completo, "is_admin": usuario_db.es_admin, "csrf": csrf_token, "jti": generar_jti(), "exp": datetime.now(timezone.utc) + timedelta(hours=8)},
             JWT_SECRET, algorithm="HS256"
         )
 
         current_app.logger.info(f"inicio de sesión exitoso: {usuario_db.usuario}")
-        respuesta = make_response(jsonify({"success": True, "usuario": usuario_db.nombre_completo, "is_admin": usuario_db.es_admin}))
-        respuesta.set_cookie('unida_token', token_jwt, httponly=True, secure=not DEBUG_MODE, samesite='Lax', max_age=28800)
+        respuesta = make_response(jsonify({
+            "success": True,
+            "nombre_completo": usuario_db.nombre_completo,
+            "usuario": usuario_db.usuario,
+            "is_admin": usuario_db.es_admin
+        }))
+        set_cookies_sesion(respuesta, token_jwt, csrf_token, secure=not DEBUG_MODE)
         return respuesta
     finally:
         session.close()
@@ -75,41 +92,34 @@ def login_evaluador():
             current_app.logger.warning(f"intento de acceso a seminario con clave invalida: {clave} desde {get_remote_address()}")
             return jsonify({"success": False, "mensaje": "Clave incorrecta"}), 401
 
-        # --- VALIDACIÓN DE PLAZOS (ANTES DE INICIAR Y 72 HORAS) ---
-        if seminario.fecha and seminario.hora:
-            fecha_inicio = datetime.combine(seminario.fecha, seminario.hora).replace(tzinfo=ZoneInfo("America/Mexico_City"))
-            fecha_fin = fecha_inicio + timedelta(hours=72)
-            ahora = datetime.now(ZoneInfo("America/Mexico_City"))
-            
-            inicio_str = fecha_inicio.strftime("%d/%m/%Y %I:%M %p")
-            fin_str = fecha_fin.strftime("%d/%m/%Y %I:%M %p")
+        ventana = calcular_ventana_evaluacion(seminario)
+        if not ventana["disponible"]:
+            if ventana["estado"] == "antes":
+                mensaje = (
+                    f"Todavía no se puede evaluar este seminario.\n\n"
+                    f"🎓 Alumno: {seminario.estudiante.nombre}\n"
+                    f"📚 Proyecto: {seminario.proyecto}\n\n"
+                    f"🟢 Disponible desde:\n{ventana['inicio']}\n"
+                    f"🔴 Plazo máximo:\n{ventana['fin']}"
+                )
+            elif ventana["estado"] == "caducado":
+                mensaje = (
+                    f"El periodo de evaluación caducó.\n\n"
+                    f"⏳ El plazo máximo de {VENTANA_EVALUACION_HORAS} horas para realizar la evaluación ha concluido.\n\n"
+                    f"🟢 Inició: {ventana['inicio']}\n"
+                    f"🔴 Finalizó: {ventana['fin']}"
+                )
+            else:
+                mensaje = ventana["mensaje"]
+            return jsonify({"success": False, "mensaje": mensaje}), 403
 
-            if ahora < fecha_inicio:
-                return jsonify({
-                    "success": False, 
-                    "mensaje": f"Todavía no se puede evaluar este seminario.\n\n"
-                        f"🎓 Alumno: {seminario.estudiante.nombre}\n"
-                        f"📚 Proyecto: {seminario.proyecto}\n\n"
-                        f"🟢 Disponible desde:\n{inicio_str}\n"
-                        f"🔴 Plazo máximo:\n{fin_str}"
-                }), 403
-
-            if ahora > fecha_fin:
-                return jsonify({
-                    "success": False, 
-                    "mensaje": f"El periodo de evaluación caducó.\nInicio: {inicio_str}\nFin: {fin_str}"
-                        f"⏳ El plazo máximo de 72 horas para realizar la evaluación ha concluido.\n\n"
-                        f"🟢 Inició: {inicio_str}\n"
-                        f"🔴 Finalizó: {fin_str}"
-                }), 403
-        # ------------------------------
-
+        csrf_token = generar_csrf_token()
         token_jwt = jwt.encode(
-            {"id_seminario": seminario.id, "rol": "evaluador", "exp": datetime.now(timezone.utc) + timedelta(hours=8)},
+            {"id_seminario": seminario.id, "rol": "evaluador", "csrf": csrf_token, "jti": generar_jti(), "exp": datetime.now(timezone.utc) + timedelta(hours=8)},
             JWT_SECRET, algorithm="HS256"
         )
         respuesta = make_response(jsonify({"success": True, "mensaje": "Acceso concedido"}))
-        respuesta.set_cookie('unida_token', token_jwt, httponly=True, secure=not DEBUG_MODE, samesite='Lax', max_age=28800)
+        set_cookies_sesion(respuesta, token_jwt, csrf_token, secure=not DEBUG_MODE)
         return respuesta
     finally:
         session.close()
@@ -129,12 +139,82 @@ def login_estudiante():
             current_app.logger.warning(f"intento de login estudiante fallido para control: {usuarioAlumno} desde {get_remote_address()}")
             return jsonify({"success": False, "mensaje": "Número de control o contraseña incorrectos"}), 401
 
+        csrf_token = generar_csrf_token()
         token_jwt = jwt.encode(
-            {"id_estudiante": estudiante.id, "rol": "estudiante", "exp": datetime.now(timezone.utc) + timedelta(hours=8)},
+            {"id_estudiante": estudiante.id, "rol": "estudiante", "csrf": csrf_token, "jti": generar_jti(), "exp": datetime.now(timezone.utc) + timedelta(hours=8)},
             JWT_SECRET, algorithm="HS256"
         )
         respuesta = make_response(jsonify({"success": True, "mensaje": "Login exitoso"}))
-        respuesta.set_cookie('unida_token', token_jwt, httponly=True, secure=not DEBUG_MODE, samesite='Lax', max_age=28800)
+        set_cookies_sesion(respuesta, token_jwt, csrf_token, secure=not DEBUG_MODE)
+        return respuesta
+    finally:
+        session.close()
+
+
+
+@auth_bp.route("/login-alumno-evaluador", methods=["POST"])
+@limiter.limit("5 per minute")
+@validar_json
+def login_alumno_evaluador():
+    session = Session()
+    try:
+        data = request.get_json()
+        control = data.get("usuarioAlumno", "").strip()
+        password = data.get("password", "").strip()
+        clave = data.get("seminar_code", "").strip()
+
+        estudiante = session.query(Estudiante).filter_by(usuarioAlumno=control).first()
+        if not estudiante or not check_password_hash(estudiante.password_hash, password):
+            return jsonify({"success": False, "mensaje": "Credenciales de estudiante incorrectas"}), 401
+
+        seminario = session.query(Seminario).filter_by(clave_acceso=clave).first()
+        if not seminario:
+            return jsonify({"success": False, "mensaje": "Clave de seminario incorrecta"}), 401
+
+        if seminario.estudiante_id == estudiante.id:
+            return jsonify({"success": False, "mensaje": "No puedes evaluar tu propio seminario."}), 403
+
+        ya_evaluo = session.query(Evaluacion).filter_by(
+            seminario_id=seminario.id, evaluador_estudiante_id=estudiante.id
+        ).first()
+        if ya_evaluo:
+            return jsonify({"success": False, "mensaje": "Ya evaluaste este seminario anteriormente."}), 409
+
+        ventana = calcular_ventana_evaluacion(seminario)
+        if not ventana["disponible"]:
+            if ventana["estado"] == "antes":
+                mensaje = (
+                    f"Todavía no se puede evaluar este seminario.\n\n"
+                    f"🟢 Disponible desde:\n{ventana['inicio']}\n"
+                    f"🔴 Plazo máximo:\n{ventana['fin']}"
+                )
+            elif ventana["estado"] == "caducado":
+                mensaje = (
+                    f"El periodo de evaluación caducó.\n\n"
+                    f"⏳ El plazo máximo de {VENTANA_EVALUACION_HORAS} horas para realizar la evaluación ha concluido.\n\n"
+                    f"🟢 Inició: {ventana['inicio']}\n"
+                    f"🔴 Finalizó: {ventana['fin']}"
+                )
+            else:
+                mensaje = ventana["mensaje"]
+            return jsonify({"success": False, "mensaje": mensaje}), 403
+
+        csrf_token = generar_csrf_token()
+        token_jwt = jwt.encode(
+            {
+                "id_seminario": seminario.id, 
+                "rol": "evaluador",
+                "rol_evaluador": "Alumno",
+                "nombre_evaluador": estudiante.nombre,
+                "id_estudiante_evaluador": estudiante.id,
+                "csrf": csrf_token,
+                "jti": generar_jti(),
+                "exp": datetime.now(timezone.utc) + timedelta(hours=8)
+            },
+            JWT_SECRET, algorithm="HS256"
+        )
+        respuesta = make_response(jsonify({"success": True, "mensaje": "Acceso concedido"}))
+        set_cookies_sesion(respuesta, token_jwt, csrf_token, secure=not DEBUG_MODE)
         return respuesta
     finally:
         session.close()

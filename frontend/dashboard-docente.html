@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UNIDA — Panel del Docente</title>
+  <link rel="stylesheet" href="./css/dashboard-docente.css">
+</head>
+
+<body>
+
+  <header>
+    <div class="header-texto">
+      <h1>UNIDA — Panel del Docente</h1>
+      <p>Bienvenido, <span id="nombre-docente">...</span></p>
+    </div>
+    <a href="/logout" class="btn-salir">Cerrar sesión</a>
+  </header>
+
+  <main>
+
+    <!-- SELECTOR DE MES -->
+    <section class="tarjeta filtro-mes">
+      <label for="selector-mes-mes">Consultar seminarios del mes:</label>
+      <div class="selector-mes-grupo">
+        <select id="selector-mes-mes"></select>
+        <select id="selector-mes-anio"></select>
+      </div>
+    </section>
+
+    <!-- CALENDARIO -->
+    <section class="tarjeta">
+      <div id="titulo-mes" class="titulo-mes"></div>
+      <div class="calendario-cabecera">
+        <span>Dom</span><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span>
+      </div>
+      <div id="calendario-grid" class="calendario-grid">
+        <p class="mensaje-vacio">Cargando calendario...</p>
+      </div>
+    </section>
+
+    <!-- LISTA DE SEMINARIOS DEL DÍA SELECCIONADO -->
+    <section class="tarjeta hidden" id="panel-dia">
+      <div class="titulo-mes" id="titulo-dia"></div>
+      <input type="text" id="buscador-dia" placeholder="🔍 Buscar por nombre de alumno o seminario..." style="width: 100%; padding: 10px; margin-bottom: 15px; border-radius: 6px; border: 1px solid var(--border); font-size: 0.95rem; outline: none;">
+      <div id="lista-seminarios-dia"></div>
+    </section>
+
+  </main>
+
+  <!-- MODAL: INFO PREVIA + EVALUACIÓN -->
+  <div class="modal-overlay hidden" id="modal-seminario">
+    <div class="modal-content">
+      <button class="btn-cerrar-modal" id="btn-cerrar-modal">✕</button>
+
+      <div id="vista-info-previa">
+        <h3>Información del seminario</h3>
+        <div class="info-previa" id="contenido-info-previa"></div>
+
+        <div id="ya-evaluado-aviso" class="aviso-evaluado hidden">
+          ✅ Ya evaluaste este seminario. Gracias por tu retroalimentación.
+        </div>
+
+        <div id="no-disponible-aviso" class="aviso-ventana hidden"></div>
+
+        <button type="button" class="btn-submit" id="btn-comenzar-evaluacion">Comenzar evaluación</button>
+        <button type="button" class="btn-secondary" style="width:100%; margin-top:10px;" onclick="document.getElementById('btn-cerrar-modal').click()">Cerrar ventana</button>
+      </div>
+
+      <form id="form-evaluacion-docente" class="hidden" onsubmit="return false;">
+        <h4 id="subtitulo-oral" class="subtitulo-form">I. Exposición Oral (P1 a P8 — Escala del 1 al 10)</h4>
+        <div id="quest-container-10"></div>
+
+        <h4 id="subtitulo-escrito" class="subtitulo-form">II. Reporte escrito y debate (P9 a P12 — Escala del 1 al 5)</h4>
+        <div id="quest-container-5"></div>
+
+        <div id="contenedor-calificacion-directa" class="hidden form-group">
+          <label for="calificacion_directa">Calificación directa de la fase (0 a 100) *</label>
+          <input type="number" id="calificacion_directa" min="0" max="100" step="0.1" placeholder="Ej. 95.5">
+        </div>
+
+        <div class="form-group" style="margin-top: 20px;">
+          <label for="txt-comentarios-docente">Observaciones y retroalimentación (mínimo 50 caracteres) *</label>
+          <textarea id="txt-comentarios-docente" rows="4"
+            placeholder="Escribe tus comentarios y correcciones para el estudiante..." required></textarea>
+          <div id="comentarios-info-docente" class="char-counter">0 / 50 caracteres</div>
+        </div>
+
+        <button type="button" class="btn-submit" id="btn-enviar-evaluacion-docente" disabled>Enviar evaluación</button>
+      </form>
+    </div>
+  </div>
+
+  <footer>
+    &copy; 2026 Instituto Tecnológico de Veracruz &middot; UNIDA &middot; Todos los derechos reservados.
+  </footer>
+
+  <script type="module" src="./js/dashboard-docente.js"></script>
+</body>
+
+</html>

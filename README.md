@@ -7,6 +7,32 @@ Proyecto para registrar y evaluar los seminarios de posgrado del Instituto Tecno
 * Python (Flask)
 * Base de datos: MySQL
 
+## Mantenimiento
+
+### Backups
+La base de datos se respalda con `backend/scripts/backup_db.py`. Genera un dump comprimido en `backend/backups/` y borra los que tengan más de 30 días.
+
+```bash
+python backup_db.py backup
+python backup_db.py list
+python backup_db.py restore
+python backup_db.py clean
+```
+
+No se ejecuta solo: hay que programarlo con cron en el servidor. Detalles en [Setup.md](Setup.md#backups-automáticos).
+
+### Health Check
+`GET /health` revisa que el backend esté corriendo y conectado a MySQL.
+
+```json
+{"status": "ok", "timestamp": "2026-09-09T05:32:00+00:00"}
+```
+
+`status` es `"ok"` (200) o `"error"` (503) si falla la conexión a la BD.
+
+### PDFs
+Las cédulas de evaluación se generan con WeasyPrint, que en Linux necesita Pango, Cairo y GDK-Pixbuf instalados aparte del `pip install`. Ver [Setup.md](Setup.md#requisito-previo-solo-para-usuarios-de-linux).
+
 ## 💡 Sobre el desarrollo
 
 Este sistema fue desarrollado de forma conjunta para la Unidad de Investigación y Desarrollo en Alimentos (UNIDA) del Instituto Tecnológico de Veracruz. El objetivo principal fue digitalizar y asegurar el proceso de evaluación de seminarios para sus programas.

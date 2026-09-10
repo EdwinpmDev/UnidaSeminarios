@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>UNIDA — Sistema de Seminarios de Posgrado</title>
   <link rel='stylesheet' href='./css/login.css'>
+  <link rel='stylesheet' href='./css/compat.css'>
 </head>
 
 <body>
@@ -22,13 +23,14 @@
         <button id="btn-tab-profesor" class="tab-button active" onclick="cambiarPestañaPrincipal('profesor')">Profesor
           UNIDA</button>
         <button id="btn-tab-estudiante" class="tab-button"
-          onclick="cambiarPestañaPrincipal('estudiante')">Estudiante</button>
+          onclick="cambiarPestañaPrincipal('estudiante')">Estudiante UNIDA</button>
         <button id="btn-tab-evaluador" class="tab-button"
-          onclick="cambiarPestañaPrincipal('evaluador')">Evaluador</button>
+          onclick="cambiarPestañaPrincipal('evaluador')">Evaluador Externo</button>
       </div>
 
       <div class="folder-body">
 
+        <!-- TAB PROFESOR -->
         <div id="tab-profesor" class="tab-content active">
           <form class="login-form" action="/login-profesor" method="POST">
             <h3>Profesor UNIDA</h3>
@@ -52,8 +54,10 @@
           </form>
         </div>
 
+        <!-- TAB ESTUDIANTE -->
         <div id="tab-estudiante" class="tab-content">
 
+          <!-- 1. LOGIN DE ESTUDIANTE AL PORTAL -->
           <div id="sub-form-estudiante" class="sub-form-content active">
             <form class="login-form" action="/login-estudiante" method="POST">
               <h3>Acceso Estudiantes</h3>
@@ -78,28 +82,95 @@
             </form>
 
             <div class="switch-role-container">
-              <button class="btn-switch-link" onclick="conmutarSubFormulario('invitado')">
-                ¿Eres Invitado? Ingresa aquí
+              <button type="button" class="btn-switch-link" onclick="conmutarSubFormulario('invitado')">
+                ¿Evaluar a un compañero? Ingresa aquí
+              </button>
+              <button type="button" class="btn-switch-link" onclick="conmutarSubFormulario('registro')" style="margin-top: 10px; display: block; width: 100%;">
+                ¿Nuevo ingreso? Crea tu cuenta aquí
               </button>
             </div>
           </div>
 
-          <div id="sub-form-invitado" class="sub-form-content">
-            <form class="login-form" action="/login-invitado" method="POST">
-              <h3>Acceso Invitado</h3>
-              <p class="form-subtitle">Ingresa con tu enlace especial o clave temporal proporcionada.</p>
+          <!-- 2. REGISTRO DE CUENTA NUEVA -->
+          <div id="sub-form-registro" class="sub-form-content">
+            <form class="login-form" id="form-auto-registro">
+              <h3>Crear Cuenta</h3>
+              <p class="form-subtitle">Regístrate para que la UNIDA asigne tu seminario.</p>
 
               <div class="input-group">
-                <label for="code-invitado">Código de Invitación</label>
-                <input type="text" id="code-invitado" name="guest_code" placeholder="invitado-xyz"
-                  style="text-align: center;" required />
+                <input type="text" id="reg-control" placeholder="Ej. 20000001" pattern="\d{8,}"
+                  title="Debe contener mínimo 8 números" required />
+                <small class="form-hint">Mínimo 8 números. Solo números, sin letras, espacios ni símbolos.</small>
               </div>
+              <div class="input-group">
+                <input type="text" id="reg-nombre" placeholder="Nombre completo (Solo letras)"
+                  pattern="[A-Za-zÁÉÍÓÚáéíóúÑñÜü\s]+" title="Solo letras y espacios, sin números ni símbolos" required />
+                <small class="form-hint">Solo letras y espacios. Sin números ni símbolos.</small>
+              </div>
+              <div class="input-group">
+                <input type="email" id="reg-correo" placeholder="Correo institucional" required />
+                <small class="form-hint">Debe incluir @ y un dominio, ej. ejemplo@veracruz.tecnm.mx</small>
+              </div>
+              <div class="input-group" style="margin-bottom: 20px;">
+                <select id="reg-programa"
+                  style="width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.95rem; background: #fff;"
+                  required>
+                  <option value="" disabled selected>Selecciona tu programa</option>
+                  <option value="Maestría">Maestría</option>
+                  <option value="Doctorado">Doctorado</option>
+                </select>
+              </div>
+              <div class="input-group">
+                <div class="password-container">
+                  <input type="password" id="reg-pass" placeholder="Ej. 200499"
+                    pattern="\d{6,}" title="Debe contener mínimo 6 números" required />
+                  <button type="button" class="btn-toggle-password" tabindex="-1"
+                    title="Mostrar contraseña">👁️</button>
+                </div>
+              </div>
+              <small class="form-hint">Mínimo 6 números. Solo números, sin letras ni símbolos.</small>
 
-              <button type="submit" class="btn-submit">Acceder</button>
+              <button type="submit" class="btn-submit" id="btn-submit-registro">Registrarme</button>
+              <p class="login-error hidden" id="error-registro"></p>
+              <p class="login-error hidden" id="exito-registro"
+                style="background: #dcfce7; color: #166534; border-color: #bbf7d0;"></p>
             </form>
 
             <div class="switch-role-container">
-              <button class="btn-switch-link" onclick="conmutarSubFormulario('estudiante')">
+              <button type="button" class="btn-switch-link" onclick="conmutarSubFormulario('estudiante')">
+                Ya tengo cuenta. Regresar al login.
+              </button>
+            </div>
+          </div>
+
+          <!-- 3. EVALUACIÓN ESTUDIANTIL (Antes Invitado) -->
+          <div id="sub-form-invitado" class="sub-form-content">
+            <form class="login-form" action="/login-alumno-evaluador" method="POST" id="form-alumno-evaluador">
+              <h3>Evaluación Estudiantil</h3>
+              <p class="form-subtitle">Ingresa tus datos y la clave del seminario para evaluar a tu compañero.</p>
+
+              <div class="input-group">
+                <label>No. de Control</label>
+                <input type="text" id="eval-control" pattern="\d{8,}" title="Debe contener mínimo 8 números" required />
+              </div>
+              <div class="input-group">
+                <label>Contraseña</label>
+                <div class="password-container">
+                  <input type="password" id="eval-pass" required />
+                  <button type="button" class="btn-toggle-password" tabindex="-1">👁️</button>
+                </div>
+              </div>
+              <div class="input-group">
+                <label>Clave del Seminario</label>
+                <input type="text" id="eval-clave" style="text-align: center; font-family: monospace;" required />
+              </div>
+
+              <button type="submit" class="btn-submit">Ingresar a evaluar</button>
+              <p class="login-error hidden" id="error-alumno-evaluador"></p>
+            </form>
+
+            <div class="switch-role-container">
+              <button type="button" class="btn-switch-link" onclick="conmutarSubFormulario('estudiante')">
                 Regresar al Login de Estudiantes
               </button>
             </div>
@@ -107,9 +178,10 @@
 
         </div>
 
+        <!-- TAB EVALUADOR EXTERNO  -->
         <div id="tab-evaluador" class="tab-content">
           <form class="login-form" action="/login-evaluador" method="POST">
-            <h3>Evaluador</h3>
+            <h3>Evaluador Externo</h3>
             <p class="form-subtitle">Acceso rápido para la evaluación en tiempo real de seminarios.</p>
 
             <div class="input-group">
@@ -129,7 +201,8 @@
   <footer>
     &copy; 2026 Instituto Tecnológico de Veracruz &middot; UNIDA &middot; Todos los derechos reservados.
   </footer>
-  <script src="./js/login.js"></script>
+  <script type="module" src="./js/login.js"></script>
+  <script src="./js/compat.js"></script>
 </body>
 
 </html>

@@ -1,7 +1,7 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import Column, Integer, String, Float, Text, ForeignKey, DateTime, Date, Time, Boolean
+from sqlalchemy import Column, Integer, String, Float, Text, ForeignKey, DateTime, Date, Time, Boolean, UniqueConstraint
 from sqlalchemy.orm import relationship
 from werkzeug.security import check_password_hash
 
@@ -38,9 +38,6 @@ class Seminario(Base):
     estudiante_id = Column(Integer, ForeignKey("estudiantes.id", ondelete="CASCADE"), nullable=False)
 
     clave_acceso = Column(String(20), unique=True, nullable=False)
-    clave_presidente = Column(String(20), nullable=True)
-    clave_secretario = Column(String(20), nullable=True)
-    clave_vocal = Column(String(20), nullable=True)
 
     tipo_seminario = Column(String(50), nullable=False)
     proyecto = Column(Text, nullable=False)
@@ -50,9 +47,10 @@ class Seminario(Base):
     hora = Column(Time, nullable=True)
     lugar = Column(String(255), nullable=True)
     modalidad = Column(String(20), nullable=True)
-    duracion = Column(String(20), nullable=True)
+    duracion = Column(Integer, nullable=True)
     jurado_texto = Column(Text, nullable=True)
     observaciones = Column(Text, nullable=True)
+    programa_historico = Column(String(50), nullable=True)
 
     estudiante = relationship("Estudiante", back_populates="seminarios")
     evaluaciones = relationship("Evaluacion", back_populates="seminario", cascade="all, delete-orphan")
@@ -60,8 +58,14 @@ class Seminario(Base):
 
 class Evaluacion(Base):
     __tablename__ = "evaluaciones"
+    __table_args__ = (
+        UniqueConstraint("seminario_id", "evaluador_estudiante_id", name="uq_eval_seminario_estudiante"),
+        UniqueConstraint("seminario_id", "evaluador_id", name="uq_eval_seminario_docente"),
+    )
     id = Column(Integer, primary_key=True, autoincrement=True)
     seminario_id = Column(Integer, ForeignKey("seminarios.id", ondelete="CASCADE"), nullable=False)
+    evaluador_id = Column(Integer, ForeignKey("usuarios_evaluadores.id", ondelete="SET NULL"), nullable=True, index=True)
+    evaluador_estudiante_id = Column(Integer, ForeignKey("estudiantes.id", ondelete="SET NULL"), nullable=True, index=True)
     evaluador_nombre = Column(String(100), nullable=False)
     evaluador_rol = Column(String(50), nullable=False)
     calificacion_final = Column(Float, nullable=False)
@@ -70,3 +74,13 @@ class Evaluacion(Base):
     fecha_evaluacion = Column(DateTime, default=lambda: datetime.now(ZoneInfo("America/Mexico_City")))
 
     seminario = relationship("Seminario", back_populates="evaluaciones")
+    docente = relationship("UsuarioEvaluador")
+    estudiante_evaluador = relationship("Estudiante", foreign_keys=[evaluador_estudiante_id])
+
+
+class TokenRevocado(Base):
+    __tablename__ = "tokens_revocados"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    jti = Column(String(36), unique=True, nullable=False, index=True)
+    fecha_expiracion = Column(DateTime, nullable=False, index=True)
+    fecha_creacion = Column(DateTime, default=lambda: datetime.now(ZoneInfo("America/Mexico_City")))

@@ -1,0 +1,64 @@
+{
+  "Global": [
+    {
+      "escala_maxima": 10,
+      "id": "P1",
+      "texto": "Planteamiento del problema, justificación y definición clara de objetivos."
+    },
+    {
+      "escala_maxima": 10,
+      "id": "P2",
+      "texto": "Dominio, rigor científico y profundidad conceptual del tema expuesto."
+    },
+    {
+      "escala_maxima": 10,
+      "id": "P3",
+      "texto": "Metodología utilizada, materiales, desarrollo y consistencia de la investigación."
+    },
+    {
+      "escala_maxima": 10,
+      "id": "P4",
+      "texto": "Resultados obtenidos, conclusiones alcanzadas o aportaciones esperadas."
+    },
+    {
+      "escala_maxima": 10,
+      "id": "P5",
+      "texto": "Uso correcto del tiempo asignado para la exposición oral."
+    },
+    {
+      "escala_maxima": 10,
+      "id": "P6",
+      "texto": "Claridad, fluidez, dicción y propiedad en la expresión oral."
+    },
+    {
+      "escala_maxima": 10,
+      "id": "P7",
+      "texto": "Calidad de las diapositivas, recursos audiovisuales y herramientas de apoyo."
+    },
+    {
+      "escala_maxima": 10,
+      "id": "P8",
+      "texto": "Organización, estructura y secuencia lógica de la presentación."
+    },
+    {
+      "escala_maxima": 5,
+      "id": "P9",
+      "texto": "Estructura formal del reporte escrito entregado previamente."
+    },
+    {
+      "escala_maxima": 5,
+      "id": "P10",
+      "texto": "Actualización, pertinencia y calidad de las referencias bibliográficas."
+    },
+    {
+      "escala_maxima": 5,
+      "id": "P11",
+      "texto": "Cumplimiento del plan de trabajo y cronograma establecido."
+    },
+    {
+      "escala_maxima": 5,
+      "id": "P12",
+      "texto": "Capacidad de respuesta y debate crítico ante las preguntas del sínodo."
+    }
+  ]
+}

@@ -1,5 +1,6 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
+import json
 from flask import Blueprint, current_app, jsonify, request
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
@@ -11,23 +12,60 @@ from config import JWT_SECRET
 from extensions import Session, limiter
 from models import Estudiante, Evaluacion, Seminario
 from utils import (
+    CLAVE_ACCESO_REGEX,
     CORREO_REGEX,
+    FASES_POR_PROGRAMA,
+    LONGITUD_MAX_COMENTARIO,
+    LONGITUD_MAX_CORTO,
+    LONGITUD_MAX_NOMBRE_JURADO,
     NOMBRE_REGEX,
     NUMERO_CONTROL_REGEX,
     PASSWORD_ESTUDIANTE_REGEX,
+    PROGRAMAS_VALIDOS,
+    calcular_ventana_evaluacion,
     generar_clave_acceso,
+    limpiar_texto_libre,
     parsear_jurado,
+    validar_longitud,
 )
 
-from auth.decorators import csrf_protegido, token_requerido, validar_json
+from auth.decorators import admin_requerido, csrf_protegido, estudiante_requerido, token_esta_revocado, token_requerido, validar_json
 
 estudiantes_bp = Blueprint("estudiantes", __name__)
 
 
-# --- GESTIÓN CRUD DE ALUMNOS Y SEMINARIOS ---
+def hay_colision_horario(session, fecha_obj, hora_obj, duracion, lugar, excluir_id=None):
+    inicio_nuevo = datetime.combine(fecha_obj, hora_obj)
+    fin_nuevo = inicio_nuevo + timedelta(minutes=duracion)
+    query = session.query(Seminario).filter(
+        Seminario.fecha == fecha_obj,
+        Seminario.lugar == lugar,
+        Seminario.hora.isnot(None),
+        Seminario.duracion.isnot(None),
+    )
+    if excluir_id:
+        query = query.filter(Seminario.id != excluir_id)
+    for otro in query.all():
+        inicio_otro = datetime.combine(otro.fecha, otro.hora)
+        fin_otro = inicio_otro + timedelta(minutes=otro.duracion)
+        if inicio_nuevo < fin_otro and inicio_otro < fin_nuevo:
+            return otro
+    return None
+
+
+def mensaje_colision(otro):
+    fin_otro = datetime.combine(otro.fecha, otro.hora) + timedelta(minutes=otro.duracion)
+    return (
+        f"Ese horario choca con el seminario de {otro.estudiante.nombre} ({otro.proyecto}) "
+        f"en {otro.lugar}, agendado el {otro.fecha.strftime('%d/%m/%Y')} "
+        f"de {otro.hora.strftime('%H:%M')} a {fin_otro.strftime('%H:%M')}."
+    )
+
+
+# --- GESTIÓN CRUD DE ALUMNOS Y SEMINARIOS
 
 @estudiantes_bp.route("/registrar-estudiante", methods=["POST"])
-@token_requerido
+@admin_requerido
 @csrf_protegido
 @validar_json
 @limiter.limit("10 per minute")
@@ -37,31 +75,54 @@ def registrar_estudiante():
         data = request.get_json() or {}
         usuarioAlumno, nombre = data.get("usuarioAlumno", "").strip(), data.get("nombre", "").strip()
         password, correo = data.get("password_estudiante", "").strip(), data.get("correo", "").strip()
-        lugar = data.get("lugar", "").strip()
-        duracion = data.get("duracion", "").strip()
+        programa = data.get("programa", "").strip()
+        tipo_seminario = data.get("tipo_seminario", "").strip()
+        lugar = limpiar_texto_libre(data.get("lugar", ""))
+        proyecto = limpiar_texto_libre(data.get("proyecto", ""))
+        observaciones = limpiar_texto_libre(data.get("observaciones", ""))
+        presidente = limpiar_texto_libre(data.get("presidente", ""))
+        secretario = limpiar_texto_libre(data.get("secretario", ""))
+        vocal = limpiar_texto_libre(data.get("vocal", ""))
+
+        try:
+            duracion = int(data.get("duracion"))
+        except (TypeError, ValueError):
+            return jsonify({"success": False, "mensaje": "La duración debe ser un número de minutos válido"}), 400
+        if duracion <= 0:
+            return jsonify({"success": False, "mensaje": "La duración debe ser mayor a 0"}), 400
 
         if not usuarioAlumno or not nombre:
             return jsonify({"success": False, "mensaje": "Faltan datos obligatorios (Control o Nombre)"}), 400
 
-        # Verificar si el estudiante ya existe
-        estudiante_existente = session.query(Estudiante).filter_by(usuarioAlumno=usuarioAlumno).first()
+        for campo, valor, maximo in (
+            ("proyecto", proyecto, LONGITUD_MAX_CORTO),
+            ("lugar", lugar, LONGITUD_MAX_CORTO),
+            ("observaciones", observaciones, LONGITUD_MAX_COMENTARIO),
+            ("presidente", presidente, LONGITUD_MAX_NOMBRE_JURADO),
+            ("secretario", secretario, LONGITUD_MAX_NOMBRE_JURADO),
+            ("vocal", vocal, LONGITUD_MAX_NOMBRE_JURADO),
+        ):
+            if not validar_longitud(valor, maximo):
+                return jsonify({"success": False, "mensaje": f"El campo '{campo}' no puede superar los {maximo} caracteres"}), 400
 
-        # Si no existe, la contraseña es obligatoria
+        estudiante_existente = session.query(Estudiante).filter_by(usuarioAlumno=usuarioAlumno).first()
         if not estudiante_existente and not password:
             return jsonify({"success": False, "mensaje": "La contraseña es obligatoria para nuevos alumnos"}), 400
 
         if not NOMBRE_REGEX.match(nombre):
             return jsonify({"success": False, "mensaje": "El nombre solo puede contener letras y espacios"}), 400
         if not NUMERO_CONTROL_REGEX.match(usuarioAlumno):
-            return jsonify({"success": False, "mensaje": "El usuario debe tener al menos 8 caracteres/numeros."}), 400
+            return jsonify({"success": False, "mensaje": "El número de control debe contener mínimo 8 números (sin letras)."}), 400
         if password and not PASSWORD_ESTUDIANTE_REGEX.match(password):
             return jsonify({"success": False, "mensaje": "La contraseña debe contener al menos 4 caracteres/numeros"}), 400
         if correo and not CORREO_REGEX.match(correo):
             return jsonify({"success": False, "mensaje": "El correo no es válido (falta un @ o un dominio, ej. .com)"}), 400
         if not lugar:
             return jsonify({"success": False, "mensaje": "Debes indicar el aula, enlace o modalidad del seminario"}), 400
-        if not duracion:
-            return jsonify({"success": False, "mensaje": "Debes indicar la duración del seminario"}), 400
+        if programa not in PROGRAMAS_VALIDOS:
+            return jsonify({"success": False, "mensaje": "Selecciona un programa válido (Maestría o Doctorado)"}), 400
+        if tipo_seminario not in FASES_POR_PROGRAMA.get(programa, []):
+            return jsonify({"success": False, "mensaje": "La fase del seminario no es válida para el programa seleccionado"}), 400
 
         try:
             fecha_obj = datetime.strptime(data.get("fecha", ""), "%Y-%m-%d").date()
@@ -72,28 +133,32 @@ def registrar_estudiante():
         except ValueError:
             return jsonify({"success": False, "mensaje": "Formatos de fecha/hora inválidos."}), 400
 
-        # --- OBTENER O CREAR ESTUDIANTE ---
+        colision = hay_colision_horario(session, fecha_obj, hora_obj, duracion, lugar)
+        if colision:
+            return jsonify({"success": False, "mensaje": mensaje_colision(colision)}), 400
+
         estudiante = session.query(Estudiante).filter_by(usuarioAlumno=usuarioAlumno).first()
         if not estudiante:
-            # Si no existe, lo creamos (contraseña es obligatoria aqui)
             if not password:
                 return jsonify({"success": False, "mensaje": "La contraseña es obligatoria para nuevos alumnos"}), 400
             estudiante = Estudiante(
                 usuarioAlumno=usuarioAlumno,
                 password_hash=generate_password_hash(password, method="pbkdf2:sha256", salt_length=16),
-                nombre=nombre, correo=correo, programa=data.get("programa", "").strip()
+                nombre=nombre, correo=correo, programa=programa
             )
             session.add(estudiante)
             session.flush()
         else:
-            # Si ya existe, actualizamos
             estudiante.nombre = nombre
             estudiante.correo = correo
-            estudiante.programa = data.get("programa", estudiante.programa).strip()
+            estudiante.programa = programa
             if password:
                 estudiante.password_hash = generate_password_hash(password, method="pbkdf2:sha256", salt_length=16)
 
-        clave_acceso = data.get("clave_acceso", "").strip().upper() or generar_clave_acceso()
+        clave_acceso_input = data.get("clave_acceso", "").strip().upper()
+        if clave_acceso_input and not CLAVE_ACCESO_REGEX.match(clave_acceso_input):
+            return jsonify({"success": False, "mensaje": "La clave de acceso debe tener entre 4 y 20 caracteres: solo letras mayúsculas (A-Z) y números"}), 400
+        clave_acceso = clave_acceso_input or generar_clave_acceso()
 
         def es_codigo_libre(codigo):
             return not session.query(Seminario).filter(
@@ -107,7 +172,6 @@ def registrar_estudiante():
                     return candidato
             raise ValueError("No se pudo generar un código único tras varios intentos")
 
-        # Si la clave general ya existe en la base de datos, se reintenta con una nueva
         intentos = 5
         while not es_codigo_libre(clave_acceso) and intentos > 0:
             clave_acceso = generar_clave_acceso()
@@ -117,20 +181,20 @@ def registrar_estudiante():
 
 
         jurado_nombres = []
-        if data.get("presidente"):
-            jurado_nombres.append(f"Presidente:{data.get('presidente').strip()}")
-        if data.get("secretario"):
-            jurado_nombres.append(f"Secretario:{data.get('secretario').strip()}")
-        if data.get("vocal"):
-            jurado_nombres.append(f"Vocal:{data.get('vocal').strip()}")
+        if presidente:
+            jurado_nombres.append(f"Presidente:{presidente}")
+        if secretario:
+            jurado_nombres.append(f"Secretario:{secretario}")
+        if vocal:
+            jurado_nombres.append(f"Vocal:{vocal}")
         jurado_texto = "|".join(jurado_nombres)
 
         session.add(Seminario(
             estudiante_id=estudiante.id, clave_acceso=clave_acceso,
-            clave_presidente=None, clave_secretario=None, clave_vocal=None,
-            tipo_seminario=data.get("tipo_seminario", ""), proyecto=data.get("proyecto", "").strip(),
-            fecha=fecha_obj, hora=hora_obj, lugar=data.get("lugar", ""), modalidad=data.get("modalidad", ""),
-            duracion=data.get("duracion", ""), jurado_texto=jurado_texto, observaciones=data.get("observaciones", "")
+            tipo_seminario=tipo_seminario, proyecto=proyecto,
+            fecha=fecha_obj, hora=hora_obj, lugar=lugar, modalidad=data.get("modalidad", ""),
+            duracion=duracion, jurado_texto=jurado_texto, observaciones=observaciones,
+            programa_historico=estudiante.programa
         ))
         session.commit()
 
@@ -149,8 +213,60 @@ def registrar_estudiante():
         session.close()
 
 
+@estudiantes_bp.route("/registro-publico", methods=["POST"])
+@limiter.limit("5 per minute")
+@validar_json
+def registro_publico():
+    session = Session()
+    try:
+        data = request.get_json()
+        control = data.get("usuarioAlumno", "").strip()
+        nombre = data.get("nombre", "").strip()
+        password = data.get("password_estudiante", "").strip()
+        correo = data.get("correo", "").strip()
+        programa = data.get("programa", "").strip()
+
+        if not control or not nombre or not password or not correo or not programa:
+            return jsonify({"success": False, "mensaje": "Faltan datos obligatorios"}), 400
+
+        # --- MISMAS RESTRICCIONES QUE USA EL ADMIN AL REGISTRAR ALUMNOS
+        if not NOMBRE_REGEX.match(nombre):
+            return jsonify({"success": False, "mensaje": "El nombre solo puede contener letras y espacios (sin números ni símbolos)"}), 400
+        if not NUMERO_CONTROL_REGEX.match(control):
+            return jsonify({"success": False, "mensaje": "El número de control debe contener mínimo 8 números (sin letras)."}), 400
+        if not PASSWORD_ESTUDIANTE_REGEX.match(password):
+            return jsonify({"success": False, "mensaje": "La contraseña debe contener al menos 4 letras/números"}), 400
+        if not CORREO_REGEX.match(correo):
+            return jsonify({"success": False, "mensaje": "El correo no es válido (falta un @ o un dominio, ej. .com)"}), 400
+        if programa not in ("Maestría", "Doctorado"):
+            return jsonify({"success": False, "mensaje": "Selecciona un programa válido"}), 400
+
+        if session.query(Estudiante).filter_by(usuarioAlumno=control).first():
+            return jsonify({"success": False, "mensaje": "Este número de control ya está registrado."}), 400
+
+        nuevo_estudiante = Estudiante(
+            usuarioAlumno=control,
+            password_hash=generate_password_hash(password, method="pbkdf2:sha256", salt_length=16),
+            nombre=nombre,
+            correo=correo,
+            programa=programa
+        )
+        session.add(nuevo_estudiante)
+        session.commit()
+
+        return jsonify({"success": True, "mensaje": "Cuenta creada. Pide a coordinación que asigne tu seminario."}), 201
+    except IntegrityError:
+        session.rollback()
+        return jsonify({"success": False, "mensaje": "Número de control duplicado."}), 400
+    except Exception as e:
+        session.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
+    finally:
+        session.close()
+
+
 @estudiantes_bp.route("/seminario/<int:id_seminario>", methods=["PUT"])
-@token_requerido
+@admin_requerido
 @csrf_protegido
 @validar_json
 def editar_seminario(id_seminario):
@@ -162,12 +278,33 @@ def editar_seminario(id_seminario):
 
         data = request.get_json() or {}
 
-        lugar = data.get("lugar", "").strip()
-        duracion = data.get("duracion", "").strip()
-        proyecto = data.get("proyecto", "").strip()
+        lugar = limpiar_texto_libre(data.get("lugar", ""))
+        proyecto = limpiar_texto_libre(data.get("proyecto", ""))
+        observaciones = limpiar_texto_libre(data.get("observaciones", ""))
+        presidente = limpiar_texto_libre(data.get("presidente", ""))
+        secretario = limpiar_texto_libre(data.get("secretario", ""))
+        vocal = limpiar_texto_libre(data.get("vocal", ""))
 
-        if not lugar or not duracion or not proyecto:
-            return jsonify({"success": False, "mensaje": "Debes indicar el proyecto, lugar y la duración del seminario"}), 400
+        try:
+            duracion = int(data.get("duracion"))
+        except (TypeError, ValueError):
+            return jsonify({"success": False, "mensaje": "La duración debe ser un número de minutos válido"}), 400
+        if duracion <= 0:
+            return jsonify({"success": False, "mensaje": "La duración debe ser mayor a 0"}), 400
+
+        if not lugar or not proyecto:
+            return jsonify({"success": False, "mensaje": "Debes indicar el proyecto y el lugar del seminario"}), 400
+
+        for campo, valor, maximo in (
+            ("proyecto", proyecto, LONGITUD_MAX_CORTO),
+            ("lugar", lugar, LONGITUD_MAX_CORTO),
+            ("observaciones", observaciones, LONGITUD_MAX_COMENTARIO),
+            ("presidente", presidente, LONGITUD_MAX_NOMBRE_JURADO),
+            ("secretario", secretario, LONGITUD_MAX_NOMBRE_JURADO),
+            ("vocal", vocal, LONGITUD_MAX_NOMBRE_JURADO),
+        ):
+            if not validar_longitud(valor, maximo):
+                return jsonify({"success": False, "mensaje": f"El campo '{campo}' no puede superar los {maximo} caracteres"}), 400
 
         try:
             fecha_obj = datetime.strptime(data.get("fecha", ""), "%Y-%m-%d").date()
@@ -178,8 +315,17 @@ def editar_seminario(id_seminario):
         except ValueError:
             return jsonify({"success": False, "mensaje": "Fecha u hora inválida"}), 400
 
+        tipo_seminario = data.get("tipo_seminario", "").strip()
+        programa_referencia = seminario.programa_historico or seminario.estudiante.programa
+        if tipo_seminario not in FASES_POR_PROGRAMA.get(programa_referencia, []):
+            return jsonify({"success": False, "mensaje": "La fase del seminario no es válida para el programa del alumno"}), 400
+
+        colision = hay_colision_horario(session, fecha_obj, hora_obj, duracion, lugar, excluir_id=id_seminario)
+        if colision:
+            return jsonify({"success": False, "mensaje": mensaje_colision(colision)}), 400
+
         seminario.proyecto = proyecto
-        seminario.tipo_seminario = data.get("tipo_seminario")
+        seminario.tipo_seminario = tipo_seminario
         seminario.modalidad = data.get("modalidad")
         seminario.lugar = lugar
         seminario.duracion = duracion
@@ -188,15 +334,22 @@ def editar_seminario(id_seminario):
 
         # Construir el texto del jurado a partir de los nombres
         jurado_nombres = []
-        if data.get("presidente"):
-            jurado_nombres.append(f"Presidente:{data.get('presidente').strip()}")
-        if data.get("secretario"):
-            jurado_nombres.append(f"Secretario:{data.get('secretario').strip()}")
-        if data.get("vocal"):
-            jurado_nombres.append(f"Vocal:{data.get('vocal').strip()}")
-        seminario.jurado_texto = "|".join(jurado_nombres)
+        if presidente:
+            jurado_nombres.append(f"Presidente:{presidente}")
+        if secretario:
+            jurado_nombres.append(f"Secretario:{secretario}")
+        if vocal:
+            jurado_nombres.append(f"Vocal:{vocal}")
+        jurado_texto_nuevo = "|".join(jurado_nombres)
 
-        seminario.observaciones = data.get("observaciones", "").strip()
+        if jurado_texto_nuevo != seminario.jurado_texto:
+            tiene_evaluaciones = session.query(Evaluacion).filter_by(seminario_id=id_seminario).first()
+            if tiene_evaluaciones:
+                return jsonify({"success": False, "mensaje": "No puedes modificar el jurado porque el seminario ya tiene evaluaciones registradas"}), 400
+
+        seminario.jurado_texto = jurado_texto_nuevo
+
+        seminario.observaciones = observaciones
 
         session.commit()
         current_app.logger.info(f"usuario {request.usuario_actual} edito el seminario id {id_seminario}")
@@ -209,7 +362,7 @@ def editar_seminario(id_seminario):
 
 
 @estudiantes_bp.route("/eliminar-estudiante/<int:id_estudiante>", methods=["DELETE"])
-@token_requerido
+@admin_requerido
 @csrf_protegido
 def eliminar_estudiante(id_estudiante):
     session = Session()
@@ -270,12 +423,19 @@ def obtener_estudiantes():
             activos = 0
             for s in est.seminarios:
                 evals = s.evaluaciones
-                es_evaluado = len(evals) >= 3
+                tiene_evaluaciones = len(evals) > 0
+
+                # Un seminario sigue activo mientras su ventana de evaluación no haya vencido
+                plazo_vencido = calcular_ventana_evaluacion(s)["estado"] == "caducado"
+                es_evaluado = plazo_vencido
+
                 if not es_evaluado:
                     activos += 1
-                    promedio_str = f"Pendiente ({len(evals)}/3)"
-                else:
+
+                if tiene_evaluaciones:
                     promedio_str = f"{round(sum(e.calificacion_final for e in evals) / len(evals), 1)} / 100"
+                else:
+                    promedio_str = "Sin evaluar"
 
                 jurado = parsear_jurado(s.jurado_texto)
 
@@ -283,13 +443,14 @@ def obtener_estudiantes():
 
                 sems_list.append({
                     "id_seminario": s.id, "proyecto": s.proyecto, "tipo_seminario": s.tipo_seminario,
-                    "clave_acceso": s.clave_acceso, "calificacion": promedio_str, "es_evaluado": es_evaluado,
-                    "clave_presidente": s.clave_presidente, "presidente": jurado.get("Presidente", ""),
-                    "clave_secretario": s.clave_secretario, "secretario": jurado.get("Secretario", ""),
-                    "clave_vocal": s.clave_vocal, "vocal": jurado.get("Vocal", ""),
-                    "calificacion": promedio_str, "es_evaluado": es_evaluado,
+                    "clave_acceso": s.clave_acceso, "calificacion": promedio_str,
+                    "es_evaluado": es_evaluado, "plazo_vencido": plazo_vencido,
+                    "presidente": jurado.get("Presidente", ""),
+                    "secretario": jurado.get("Secretario", ""),
+                    "vocal": jurado.get("Vocal", ""),
                     "fecha": str(s.fecha) if s.fecha else "", "hora": s.hora.strftime("%H:%M") if s.hora else "",
                     "lugar": s.lugar or "", "modalidad": s.modalidad or "",
+                    "programa_historico": s.programa_historico or est.programa,
                     "evaluaciones_detalle": evals_det
                 })
 
@@ -315,7 +476,7 @@ def obtener_estudiantes():
 
 
 @estudiantes_bp.route("/estudiante/<int:id_estudiante>", methods=["PUT"])
-@token_requerido
+@admin_requerido
 @csrf_protegido
 @validar_json
 def editar_solo_estudiante(id_estudiante):
@@ -335,14 +496,18 @@ def editar_solo_estudiante(id_estudiante):
             return jsonify({"success": False, "mensaje": "Número de control ocupado por otro alumno"}), 400
 
         if not NUMERO_CONTROL_REGEX.match(usuarioAlumno):
-            return jsonify({"success": False, "mensaje": "El número de control debe tener al menos 8 números."}), 400
+            return jsonify({"success": False, "mensaje": "El número de control debe contener mínimo 8 números (sin letras)."}), 400
         if not NOMBRE_REGEX.match(nombre):
             return jsonify({"success": False, "mensaje": "El nombre solo puede contener letras y espacios."}), 400
+
+        programa = data.get("programa", est.programa).strip()
+        if programa not in PROGRAMAS_VALIDOS:
+            return jsonify({"success": False, "mensaje": "Selecciona un programa válido (Maestría o Doctorado)"}), 400
 
         est.usuarioAlumno = usuarioAlumno
         est.nombre = nombre
         est.correo = data.get("correo", "").strip()
-        est.programa = data.get("programa", est.programa).strip()
+        est.programa = programa
         pw = data.get("password_estudiante", "").strip()
         if pw:
             if not PASSWORD_ESTUDIANTE_REGEX.match(pw):
@@ -358,8 +523,27 @@ def editar_solo_estudiante(id_estudiante):
         session.close()
 
 
+@estudiantes_bp.route("/api/verificar-estudiante/<control>", methods=["GET"])
+@admin_requerido
+def verificar_estudiante(control):
+    session = Session()
+    try:
+        estudiante = session.query(Estudiante).filter_by(usuarioAlumno=control.strip()).first()
+        if not estudiante:
+            return jsonify({"success": False, "mensaje": "Alumno no encontrado"}), 404
+
+        return jsonify({
+            "success": True,
+            "nombre": estudiante.nombre,
+            "correo": estudiante.correo,
+            "programa": estudiante.programa
+        }), 200
+    finally:
+        session.close()
+
+
 @estudiantes_bp.route("/buscar-alumnos-simple", methods=["GET"])
-@token_requerido
+@admin_requerido
 def buscar_alumnos_simple():
     session = Session()
     try:
@@ -404,7 +588,7 @@ def buscar_alumnos_simple():
 
 
 @estudiantes_bp.route("/eliminar-seminario/<int:id_seminario>", methods=["DELETE"])
-@token_requerido
+@admin_requerido
 @csrf_protegido
 def eliminar_seminario(id_seminario):
     session = Session()
@@ -420,7 +604,7 @@ def eliminar_seminario(id_seminario):
 
 
 @estudiantes_bp.route("/seminario/<int:id_seminario>", methods=["GET"])
-@token_requerido
+@admin_requerido
 def obtener_seminario_editable(id_seminario):
     session = Session()
     try:
@@ -445,6 +629,37 @@ def obtener_seminario_editable(id_seminario):
         session.close()
 
 
+@estudiantes_bp.route("/actualizar-mi-correo", methods=["PUT"])
+@estudiante_requerido
+@csrf_protegido
+@validar_json
+def actualizar_mi_correo():
+    session = Session()
+    try:
+        estudiante = session.query(Estudiante).filter_by(id=request.id_estudiante_actual).first()
+        if not estudiante:
+            return jsonify({"success": False, "mensaje": "Estudiante no encontrado"}), 404
+
+        data = request.get_json() or {}
+        correo_nuevo = data.get("correo", "").strip()
+
+        if not correo_nuevo:
+            return jsonify({"success": False, "mensaje": "Debes indicar un correo"}), 400
+        if not CORREO_REGEX.match(correo_nuevo):
+            return jsonify({"success": False, "mensaje": "El correo no es válido (falta un @ o un dominio, ej. .com)"}), 400
+
+        estudiante.correo = correo_nuevo
+        session.commit()
+
+        current_app.logger.info(f"el estudiante {estudiante.usuarioAlumno} actualizo su correo")
+        return jsonify({"success": True, "mensaje": "Tu correo institucional fue actualizado.", "correo": estudiante.correo}), 200
+    except Exception as e:
+        session.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
+    finally:
+        session.close()
+
+
 @estudiantes_bp.route("/mi-informacion", methods=["GET"])
 def mi_informacion():
     token = request.cookies.get('unida_token')
@@ -454,6 +669,8 @@ def mi_informacion():
     session = Session()
     try:
         data = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        if token_esta_revocado(data.get("jti")):
+            return jsonify({"success": False}), 401
         if data.get("rol") != "estudiante":
             return jsonify({"success": False}), 403
 
@@ -461,23 +678,33 @@ def mi_informacion():
         if not estudiante:
             return jsonify({"success": False}), 404
 
-        # Obtenemos TODOS los seminarios del estudiante (del más reciente al más antiguo)
-        seminarios_db = session.query(Seminario).filter_by(estudiante_id=estudiante.id).order_by(Seminario.fecha.asc(), Seminario.hora.asc()).all()
+        # Obtenemos TODOS los seminarios del estudiante
+        seminarios_db = session.query(Seminario).filter_by(estudiante_id=estudiante.id).order_by(Seminario.fecha.desc(), Seminario.hora.desc()).all()
+
+        etiquetas_estado_temporal = {
+            "antes": "Pendiente",
+            "disponible": "Activo",
+            "caducado": "Terminado",
+            "sin_fecha": "Sin fecha",
+        }
 
         lista_seminarios = []
         for sem in seminarios_db:
             evals = session.query(Evaluacion).filter_by(seminario_id=sem.id).all()
-            promedio = round(sum(e.calificacion_final for e in evals) / len(evals), 1) if len(evals) >= 3 else None
+            promedio = round(sum(e.calificacion_final for e in evals) / len(evals), 1) if len(evals) > 0 else None
 
             estado_jurado = [
                 {
-                    "rol": "Evaluador",
+                    "rol": e.evaluador_rol,
                     "nombre": e.evaluador_nombre,
                     "evaluo": True,
                     "comentarios": e.comentarios,
                 }
                 for e in evals
             ]
+
+            ventana = calcular_ventana_evaluacion(sem)
+            estado_temporal = etiquetas_estado_temporal.get(ventana["estado"], "Sin fecha")
 
             lista_seminarios.append({
                 "id_seminario": sem.id,
@@ -487,9 +714,12 @@ def mi_informacion():
                 "hora": str(sem.hora) if sem.hora else "Por definir",
                 "lugar": sem.lugar or "Por definir",
                 "modalidad": sem.modalidad or "Por definir",
+                "duracion": sem.duracion or "Por definir",
                 "jurado_texto": sem.jurado_texto or "Por asignar",
+                "programa_historico": sem.programa_historico or estudiante.programa,
                 "evaluadores": estado_jurado,
-                "promedio": promedio if promedio is not None else f"Pendiente ({len(evals)}/3 evaluaciones)"
+                "promedio": promedio if promedio is not None else f"Sin evaluar (0 evaluaciones)",
+                "estado_temporal": estado_temporal
             })
 
         return jsonify({"success": True, "datos": {

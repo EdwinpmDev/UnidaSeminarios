@@ -1,18 +1,23 @@
 import logging
 import sys
 import os
+from datetime import datetime, timezone
 from logging.handlers import RotatingFileHandler
+from configuracion.routes import configuracion_bp
 
 from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_limiter.util import get_remote_address
+from werkzeug.middleware.proxy_fix import ProxyFix
+from sqlalchemy import text
 
-from config import ADMIN_PASS, ADMIN_USER, CORS_ORIGINS, DEBUG_MODE
+from config import ADMIN_PASS, ADMIN_USER, CORS_ORIGINS, DEBUG_MODE, NUM_PROXIES
 from extensions import Base, Session, engine, limiter
 
 import models
 
 from auth.routes import auth_bp
+from auth.decorators import limpiar_tokens_revocados_expirados
 from docentes.routes import docentes_bp
 from estudiantes.routes import estudiantes_bp
 from evaluaciones.routes import evaluaciones_bp
@@ -23,19 +28,17 @@ from reportes.routes import reportes_bp
 def crear_app():
     app = Flask(__name__, static_folder=None)
 
-    # configura el límite de peso por petición para evitar ataques dos (1 mb máximo)
+    if NUM_PROXIES > 0:
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=NUM_PROXIES, x_proto=NUM_PROXIES, x_host=NUM_PROXIES)
+
     app.config['MAX_CONTENT_LENGTH'] = 1 * 1024 * 1024
 
-    # permite peticiones cruzadas para el entorno de desarrollo
     CORS(app, resources={r"/*": {"origins": CORS_ORIGINS}})
 
-    # previene ataques de fuerza bruta limitando las peticiones por ip
     limiter.init_app(app)
 
-    # crea la carpeta de logs si no existe
     os.makedirs('logs', exist_ok=True)
 
-    # configura la rotación diaria de bitacoras de auditoria y errores
     handler = RotatingFileHandler('logs/unida_auditoria.log', maxBytes=2000000, backupCount=10)
     handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
     handler.setLevel(logging.INFO if DEBUG_MODE else logging.WARNING)
@@ -44,7 +47,6 @@ def crear_app():
 
     @app.after_request
     def aplicar_cabeceras_seguridad(response):
-        # inyecta cabeceras http de seguridad en todas las respuestas
         response.headers['X-Content-Type-Options'] = 'nosniff'
         response.headers['X-Frame-Options'] = 'DENY'
         response.headers['X-XSS-Protection'] = '1; mode=block'
@@ -56,16 +58,32 @@ def crear_app():
         if DEBUG_MODE:
             return jsonify({"success": False, "error": str(error)}), 500
 
-        # guarda el error en la bitácora sin exponer el código al usuario
         app.logger.error(f"error no controlado detectado: {str(error)}")
         return jsonify({"success": False, "mensaje": "Ocurrió un error interno. El administrador ha sido notificado."}), 500
 
     @app.errorhandler(429)
     def demasiados_intentos(error):
         app.logger.warning(f"bloqueo por exceso de peticiones desde ip: {get_remote_address()}")
-        return jsonify({"success": False, "mensaje": "Demasiados intentos. Espera un momento y vuelve a intentarlo."}), 429
+        return jsonify({"success": False, "mensaje": "Demasiados intentos."}), 429
 
-    # crea las tablas en la base de datos si no existen
+    @app.route('/health')
+    def salud():
+        try:
+            with engine.connect() as conexion:
+                conexion.execute(text('SELECT 1'))
+            estado = 'ok'
+            codigo = 200
+        except Exception as error:
+            app.logger.error(f"health check falló: {str(error)}")
+            estado = 'error'
+            codigo = 503
+
+        return jsonify({
+            'status': estado,
+            'timestamp': datetime.now(timezone.utc).isoformat(),
+        }), codigo
+
+    # solo crea lo que falte
     Base.metadata.create_all(engine)
 
     app.register_blueprint(auth_bp)
@@ -74,24 +92,24 @@ def crear_app():
     app.register_blueprint(docentes_bp)
     app.register_blueprint(reportes_bp)
     app.register_blueprint(paginas_bp)
+    app.register_blueprint(configuracion_bp)
 
     return app
 
 
 def crear_usuario_administrador_inicial():
-    # crea al administrador en la configuración de entorno
     from werkzeug.security import generate_password_hash
     from models import UsuarioEvaluador
+
+    limpiar_tokens_revocados_expirados()
 
     session = Session()
     try:
         if not ADMIN_USER or not ADMIN_PASS:
             return
 
-        # Buscamos si ya existe AL MENOS UN administrador en el sistema
         admin_existente = session.query(UsuarioEvaluador).filter_by(es_admin=True).first()
 
-        # Solo si no existe NINGÚN administrador, creamos el inicial
         if not admin_existente:
             pw_hash = generate_password_hash(ADMIN_PASS, method="pbkdf2:sha256", salt_length=16)
             session.add(UsuarioEvaluador(

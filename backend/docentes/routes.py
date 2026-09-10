@@ -1,10 +1,21 @@
+from datetime import datetime
+import json
+
 from flask import Blueprint, current_app, jsonify, request
 from werkzeug.security import generate_password_hash
 
 from extensions import Session
-from models import UsuarioEvaluador
+from models import Evaluacion, Seminario, UsuarioEvaluador
+from utils import (
+    FASES_CALIFICACION_DIRECTA,
+    LONGITUD_MAX_COMENTARIO,
+    calcular_ventana_evaluacion,
+    limpiar_texto_libre,
+    parsear_jurado,
+    validar_longitud,
+)
 
-from auth.decorators import admin_requerido, csrf_protegido, validar_json
+from auth.decorators import admin_requerido, csrf_protegido, token_requerido, validar_json
 
 docentes_bp = Blueprint("docentes", __name__)
 
@@ -155,5 +166,174 @@ def editar_perfil_admin():
 
         session.commit()
         return jsonify({"success": True, "mensaje": "Tus datos han sido actualizados."})
+    finally:
+        session.close()
+
+
+@docentes_bp.route("/docentes/calendario", methods=["GET"])
+@token_requerido
+def calendario_docente():
+    session = Session()
+    try:
+        mes = request.args.get("mes", "")
+        try:
+            anio_int, mes_int = int(mes.split("-")[0]), int(mes.split("-")[1])
+        except (ValueError, IndexError):
+            hoy = datetime.now()
+            anio_int, mes_int = hoy.year, hoy.month
+
+        seminarios = session.query(Seminario).filter(
+            Seminario.fecha.isnot(None)
+        ).all()
+
+        docente = session.query(UsuarioEvaluador).filter_by(usuario=request.usuario_actual).first()
+
+        lista = []
+        for sem in seminarios:
+            if sem.fecha.year != anio_int or sem.fecha.month != mes_int:
+                continue
+
+            ya_evaluo = False
+            if docente:
+                ya_evaluo = session.query(Evaluacion).filter_by(
+                    seminario_id=sem.id, evaluador_id=docente.id
+                ).first() is not None
+
+            ventana = calcular_ventana_evaluacion(sem)
+
+            lista.append({
+                "id_seminario": sem.id,
+                "estudiante": sem.estudiante.nombre,
+                "proyecto": sem.proyecto,
+                "tipo_seminario": sem.tipo_seminario,
+                "fecha": str(sem.fecha),
+                "hora": sem.hora.strftime("%H:%M") if sem.hora else "",
+                "lugar": sem.lugar or "",
+                "modalidad": sem.modalidad or "",
+                "ya_evaluado_por_mi": ya_evaluo,
+                "estado_ventana": ventana["estado"],
+                "disponible_para_evaluar": ventana["disponible"]
+            })
+
+        return jsonify({"success": True, "seminarios": lista}), 200
+    finally:
+        session.close()
+
+
+@docentes_bp.route("/docentes/seminario/<int:id_seminario>/info", methods=["GET"])
+@token_requerido
+def info_previa_seminario(id_seminario):
+    session = Session()
+    try:
+        sem = session.query(Seminario).filter_by(id=id_seminario).first()
+        if not sem:
+            return jsonify({"success": False, "mensaje": "Seminario no encontrado"}), 404
+
+        docente = session.query(UsuarioEvaluador).filter_by(usuario=request.usuario_actual).first()
+        ya_evaluo = False
+        if docente:
+            ya_evaluo = session.query(Evaluacion).filter_by(
+                seminario_id=sem.id, evaluador_id=docente.id
+            ).first() is not None
+
+        jurado = parsear_jurado(sem.jurado_texto)
+        ventana = calcular_ventana_evaluacion(sem)
+
+        return jsonify({"success": True, "datos": {
+            "id_seminario": sem.id,
+            "estudiante": sem.estudiante.nombre,
+            "programa": sem.estudiante.programa,
+            "proyecto": sem.proyecto,
+            "tipo_seminario": sem.tipo_seminario,
+            "fecha": str(sem.fecha) if sem.fecha else "",
+            "hora": sem.hora.strftime("%H:%M") if sem.hora else "",
+            "lugar": sem.lugar or "",
+            "modalidad": sem.modalidad or "",
+            "duracion": sem.duracion or "",
+            "observaciones": sem.observaciones or "",
+            "presidente": jurado.get("Presidente", ""),
+            "secretario": jurado.get("Secretario", ""),
+            "vocal": jurado.get("Vocal", ""),
+            "ya_evaluado_por_mi": ya_evaluo,
+            "estado_ventana": ventana["estado"],
+            "disponible_para_evaluar": ventana["disponible"],
+            "mensaje_ventana": ventana["mensaje"]
+        }}), 200
+    finally:
+        session.close()
+
+
+@docentes_bp.route("/docentes/seminario/<int:id_seminario>/evaluar", methods=["POST"])
+@token_requerido
+@csrf_protegido
+@validar_json
+def evaluar_como_docente(id_seminario):
+    session = Session()
+    try:
+        docente = session.query(UsuarioEvaluador).filter_by(usuario=request.usuario_actual).first()
+        if not docente:
+            return jsonify({"success": False, "mensaje": "Docente no encontrado"}), 404
+
+        sem = session.query(Seminario).filter_by(id=id_seminario).with_for_update().first()
+        if not sem:
+            return jsonify({"success": False, "mensaje": "Seminario no encontrado"}), 404
+
+        ya_evaluo = session.query(Evaluacion).filter_by(
+            seminario_id=id_seminario, evaluador_id=docente.id
+        ).first()
+        if ya_evaluo:
+            return jsonify({"success": False, "mensaje": "Ya evaluaste este seminario."}), 409
+
+        ventana = calcular_ventana_evaluacion(sem)
+        if not ventana["disponible"]:
+            return jsonify({"success": False, "mensaje": ventana["mensaje"]}), 403
+
+        data = request.get_json() or {}
+        comentarios = limpiar_texto_libre(data.get("comentarios", ""))
+        if not validar_longitud(comentarios, LONGITUD_MAX_COMENTARIO):
+            return jsonify({"success": False, "mensaje": f"Los comentarios no pueden superar los {LONGITUD_MAX_COMENTARIO} caracteres"}), 400
+
+        es_fase_directa = sem.tipo_seminario in FASES_CALIFICACION_DIRECTA
+
+        if es_fase_directa:
+            try:
+                calif_final = round(float(data.get("calificacion_directa", "")), 1)
+            except (TypeError, ValueError):
+                return jsonify({"success": False, "mensaje": "La calificación directa debe ser un número"}), 400
+
+            if calif_final < 0 or calif_final > 100:
+                return jsonify({"success": False, "mensaje": "La calificación directa debe estar entre 0 y 100"}), 400
+
+            snapshot = []
+        else:
+            snapshot = data.get("respuestas")
+            if not snapshot or not isinstance(snapshot, list):
+                return jsonify({"success": False, "mensaje": "Faltan las respuestas del cuestionario"}), 400
+
+            suma_puntajes, suma_escalas = 0.0, 0.0
+            for item in snapshot:
+                if item.get("puntaje") is None or item.get("escala_maxima") is None:
+                    return jsonify({"success": False, "mensaje": "Respuesta incompleta en el cuestionario"}), 400
+                suma_puntajes += float(item["puntaje"])
+                suma_escalas += float(item["escala_maxima"])
+
+            if suma_escalas == 0:
+                return jsonify({"success": False, "mensaje": "Cuestionario inválido"}), 400
+
+            calif_final = round((suma_puntajes / suma_escalas) * 100, 1)
+
+        session.add(Evaluacion(
+            seminario_id=id_seminario,
+            evaluador_id=docente.id,
+            evaluador_nombre=docente.nombre_completo,
+            evaluador_rol="Docente",
+            calificacion_final=calif_final,
+            comentarios=comentarios,
+            respuestas_detalle=json.dumps(snapshot)
+        ))
+        session.commit()
+
+        current_app.logger.info(f"docente {docente.usuario} evaluo el seminario {id_seminario}")
+        return jsonify({"success": True, "calificacion": calif_final}), 201
     finally:
         session.close()
