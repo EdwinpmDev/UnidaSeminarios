@@ -20,12 +20,12 @@
     <div class="folder-container">
 
       <div class="folder-tabs">
-        <button id="btn-tab-profesor" class="tab-button active" onclick="cambiarPestañaPrincipal('profesor')">Profesor
+        <button id="btn-tab-profesor" class="tab-button active" data-rol="profesor">Profesor
           UNIDA</button>
         <button id="btn-tab-estudiante" class="tab-button"
-          onclick="cambiarPestañaPrincipal('estudiante')">Estudiante UNIDA</button>
+          data-rol="estudiante">Estudiante UNIDA</button>
         <button id="btn-tab-evaluador" class="tab-button"
-          onclick="cambiarPestañaPrincipal('evaluador')">Evaluador Externo</button>
+          data-rol="evaluador">Evaluador Externo</button>
       </div>
 
       <div class="folder-body">
@@ -82,10 +82,10 @@
             </form>
 
             <div class="switch-role-container">
-              <button type="button" class="btn-switch-link" onclick="conmutarSubFormulario('invitado')">
+              <button type="button" class="btn-switch-link" data-subrol="invitado">
                 ¿Evaluar a un compañero? Ingresa aquí
               </button>
-              <button type="button" class="btn-switch-link" onclick="conmutarSubFormulario('registro')" style="margin-top: 10px; display: block; width: 100%;">
+              <button type="button" class="btn-switch-link" data-subrol="registro" style="margin-top: 10px; display: block; width: 100%;">
                 ¿Nuevo ingreso? Crea tu cuenta aquí
               </button>
             </div>
@@ -137,13 +137,13 @@
             </form>
 
             <div class="switch-role-container">
-              <button type="button" class="btn-switch-link" onclick="conmutarSubFormulario('estudiante')">
+              <button type="button" class="btn-switch-link" data-subrol="estudiante">
                 Ya tengo cuenta. Regresar al login.
               </button>
             </div>
           </div>
 
-          <!-- 3. EVALUACIÓN ESTUDIANTIL (Antes Invitado) -->
+          <!-- 3. EVALUACIÓN ESTUDIANTE -->
           <div id="sub-form-invitado" class="sub-form-content">
             <form class="login-form" action="/login-alumno-evaluador" method="POST" id="form-alumno-evaluador">
               <h3>Evaluación Estudiantil</h3>
@@ -170,7 +170,7 @@
             </form>
 
             <div class="switch-role-container">
-              <button type="button" class="btn-switch-link" onclick="conmutarSubFormulario('estudiante')">
+              <button type="button" class="btn-switch-link" data-subrol="estudiante">
                 Regresar al Login de Estudiantes
               </button>
             </div>

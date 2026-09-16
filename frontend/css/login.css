@@ -2,9 +2,9 @@
     --primary: #1B396A;
     /* Azul TecNM / ITVER */
     --primary-dark: #132848;
-    /* Azul Oscuro */
+    /* Azul oscuro */
     --accent: #D4AF37;
-    /* Dorado Institucional */
+    /* Dorado */
     --bg: #f0f4f8;
     --card: #ffffff;
     --text: #1f2937;
@@ -295,7 +295,7 @@ footer {
     color: var(--primary);
 }
 
-/* --- Modal de Aviso --- */
+/* --- Modal de aviso --- */
 #modalAvisoGlobal.hidden {
     display: none;
 }

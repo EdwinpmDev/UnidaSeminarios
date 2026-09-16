@@ -1,6 +1,8 @@
 import { API_BASE, AUTH, apiFetch } from '../shared/api.js';
 import { escapeHTML } from '../shared/dom.js';
 import { mostrarToast, mostrarModalConfirmacion } from '../shared/toast.js';
+import { abrirEdicionAlumno } from './edicion-seminario.js';
+import { verRetroalimentacion } from './retroalimentacion.js';
 
 export let listaGlobalEstudiantes = [];
 export let paginaActual = 1;
@@ -17,6 +19,15 @@ if (btnVolverDirectorio) {
         vistaDetallesEstudiante.classList.add('hidden');
         vistaDirectorio.classList.remove('hidden');
         cargarTablaEstudiantes(paginaActual);
+    });
+}
+
+// delega el clic de "Abrir seminarios" de la tabla, generada dinamicamente
+const tablaEstudiantesBody = document.getElementById('tablaEstudiantesBody');
+if (tablaEstudiantesBody) {
+    tablaEstudiantesBody.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-action="abrir-seminarios"]');
+        if (btn) abrirDetallesEstudiante(parseInt(btn.dataset.id, 10));
     });
 }
 
@@ -68,7 +79,7 @@ function renderizarTablaAlumnos() {
                     <td style="padding: 16px 10px; vertical-align: middle; font-size: 1.05rem;"><strong>${escapeHTML(est.usuarioAlumno)}</strong></td>
                     <td style="padding: 16px 10px; vertical-align: middle;"><span style="background: #e0e7ff; color: var(--primary); padding: 6px 12px; border-radius: 12px; font-weight: bold;">${escapeHTML(est.seminarios_activos)} registrados</span></td>
                     <td style="padding: 16px 10px; vertical-align: middle;">
-                        <button type="button" onclick="abrirDetallesEstudiante(${est.id_estudiante})" style="background: var(--primary); color: white; padding: 8px 14px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.95rem;">Abrir seminarios</button>
+                        <button type="button" data-action="abrir-seminarios" data-id="${est.id_estudiante}" style="background: var(--primary); color: white; padding: 8px 14px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.95rem;">Abrir seminarios</button>
                     </td>
                 </tr>
             `;
@@ -116,6 +127,15 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
+// etiqueta visual segun si ya se puede evaluar, todavia no llega la fecha, o no tiene fecha asignada
+function etiquetaEstadoVentana(sem) {
+    switch (sem.estado_ventana) {
+        case 'disponible': return { texto: '🟢 Activo', bg: '#dcfce7', color: '#166534' };
+        case 'antes': return { texto: '🕓 Pendiente', bg: '#ffedd5', color: '#9a3412' };
+        default: return { texto: '⚪ Sin fecha', bg: '#f1f5f9', color: '#475569' };
+    }
+}
+
 // ABRIR PANEL DE DETALLES DEL ESTUDIANTE
 function renderizarListaActivos(lista, esAdmin, programaSeleccionado = 'todos') {
     const contenedorActivos = document.getElementById('contenedor-seminarios-activos');
@@ -125,24 +145,39 @@ function renderizarListaActivos(lista, esAdmin, programaSeleccionado = 'todos') 
             : 'No hay seminarios activos pendientes de evaluación.';
         contenedorActivos.innerHTML = `<p style="color: #6b7280; font-style: italic;">${mensajeVacio}</p>`;
     } else {
-        contenedorActivos.innerHTML = lista.map(sem => `
+        contenedorActivos.innerHTML = lista.map(sem => {
+            const estado = etiquetaEstadoVentana(sem);
+            return `
             <div style="border-left: 4px solid var(--accent); background: white; border-radius: 8px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid var(--border);">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; gap: 10px;">
                     <h4 style="margin:0; color: var(--primary); font-size: 1.15rem;">${escapeHTML(sem.proyecto)}</h4>
-                    <span style="font-size: 0.85rem; font-family: monospace; background: #e0e7ff; color: var(--primary); padding: 3px 8px; border-radius: 4px; font-weight: bold; flex-shrink:0;">Clave: ${escapeHTML(sem.clave_acceso)}</span>
+                    <div style="display: flex; align-items: center; gap: 8px; flex-shrink:0;">
+                        <span style="font-size: 0.8rem; font-weight: bold; padding: 3px 10px; border-radius: 12px; background: ${estado.bg}; color: ${estado.color};">${estado.texto}</span>
+                        <span style="font-size: 0.85rem; font-family: monospace; background: #e0e7ff; color: var(--primary); padding: 3px 8px; border-radius: 4px; font-weight: bold;">Clave: ${escapeHTML(sem.clave_acceso)}</span>
+                    </div>
                 </div>
                 <p style="margin: 0 0 10px 0; font-size: 0.9rem; color: #4b5563;"><strong>Fase:</strong> ${escapeHTML(sem.tipo_seminario)} &nbsp;|&nbsp; <strong>Programa:</strong> ${escapeHTML(sem.programa_historico || '')} &nbsp;|&nbsp; <strong>Fecha:</strong> ${escapeHTML(sem.fecha)} a las ${escapeHTML(sem.hora)}</p>
                 <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                     <button type="button" class="btn-copiar-link-activo" data-clave="${escapeHTML(sem.clave_acceso)}" style="background: #059669; padding: 6px 12px; font-size: 0.85rem; border-radius: 4px; border: none; cursor: pointer; color: white;">Copiar enlace evaluador</button>
-                    ${esAdmin ? `<button type="button" onclick="abrirEdicionAlumno(${sem.id_seminario})" style="background: #d97706; padding: 6px 12px; font-size: 0.85rem; border-radius: 4px; border: none; cursor: pointer; color: white;">Editar Seminario</button>` : ''}
-                    <button type="button" onclick="verRetroalimentacion(${sem.id_seminario})" style="background: var(--primary); padding: 6px 12px; font-size: 0.85rem; border-radius: 4px; border: none; cursor: pointer; color: white;">Retroalimentación</button>
-                    ${esAdmin ? `<button type="button" onclick="eliminarSeminario(${sem.id_seminario})" class="btn-danger" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 4px; border: none; cursor: pointer; color: white;">Eliminar Seminario</button>` : ''}
+                    ${esAdmin ? `<button type="button" class="btn-editar-seminario-activo" data-id="${sem.id_seminario}" style="background: #d97706; padding: 6px 12px; font-size: 0.85rem; border-radius: 4px; border: none; cursor: pointer; color: white;">Editar Seminario</button>` : ''}
+                    <button type="button" class="btn-retro-seminario-activo" data-id="${sem.id_seminario}" style="background: var(--primary); padding: 6px 12px; font-size: 0.85rem; border-radius: 4px; border: none; cursor: pointer; color: white;">Retroalimentación</button>
+                    ${esAdmin ? `<button type="button" class="btn-eliminar-seminario-activo btn-danger" data-id="${sem.id_seminario}" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 4px; border: none; cursor: pointer; color: white;">Eliminar Seminario</button>` : ''}
                 </div>
             </div>
-        `).join('');
+        `;
+        }).join('');
 
         contenedorActivos.querySelectorAll('.btn-copiar-link-activo').forEach(btn => {
             btn.addEventListener('click', () => copiarLinkEvaluador(btn.dataset.clave));
+        });
+        contenedorActivos.querySelectorAll('.btn-editar-seminario-activo').forEach(btn => {
+            btn.addEventListener('click', () => abrirEdicionAlumno(parseInt(btn.dataset.id, 10)));
+        });
+        contenedorActivos.querySelectorAll('.btn-retro-seminario-activo').forEach(btn => {
+            btn.addEventListener('click', () => verRetroalimentacion(parseInt(btn.dataset.id, 10)));
+        });
+        contenedorActivos.querySelectorAll('.btn-eliminar-seminario-activo').forEach(btn => {
+            btn.addEventListener('click', () => eliminarSeminario(parseInt(btn.dataset.id, 10)));
         });
     }
 }
@@ -194,7 +229,6 @@ export function abrirDetallesEstudiante(id_estudiante) {
     const semsActivosFiltrados = seleccionActual === 'todos' ? semsActivos : semsActivos.filter(s => s.programa_historico === seleccionActual);
     renderizarListaActivos(semsActivosFiltrados, esAdmin, seleccionActual);
 }
-window.abrirDetallesEstudiante = abrirDetallesEstudiante;
 
 // BOTONES DEL PANEL DE DETALLES
 document.getElementById('btnEliminarAlumnoTotal').addEventListener('click', async () => {
@@ -230,7 +264,6 @@ export function eliminarSeminario(id_seminario) {
         } catch (e) { mostrarToast("Error de conexión", 'error'); }
     });
 }
-window.eliminarSeminario = eliminarSeminario;
 
 function renderizarListaHistorial(lista, programaSeleccionado = 'todos') {
     const contenedor = document.getElementById('contenedor-historial-seminarios');
@@ -270,7 +303,7 @@ function renderizarListaHistorial(lista, programaSeleccionado = 'todos') {
 
             return `
             <div style="border: 1px solid var(--border); border-radius: 8px; margin-bottom: 10px;">
-                <div style="padding: 12px; background: #f8fafc; cursor: pointer; display: flex; justify-content: space-between; align-items: center;" onclick="document.getElementById('hist-${sem.id_seminario}').classList.toggle('hidden')">
+                <div class="cabecera-historial-seminario" data-id="hist-${sem.id_seminario}" style="padding: 12px; background: #f8fafc; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
                     <div style="flex:1;">
                         <span style="font-size: 0.8rem; background: ${colorBadgeFecha}; color: white; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-bottom: 4px; display: inline-block;">${escapeHTML(etiquetaFecha)}</span>
                         <h4 style="margin: 0; color: var(--primary); font-size: 1.05rem;">${escapeHTML(sem.tipo_seminario)} - ${escapeHTML(sem.calificacion)}</h4>
@@ -282,10 +315,19 @@ function renderizarListaHistorial(lista, programaSeleccionado = 'todos') {
                     <p style="margin: 0 0 8px 0;"><strong>Proyecto:</strong> ${escapeHTML(sem.proyecto)}</p>
                     <p style="margin: 0 0 8px 0;"><strong>Lugar:</strong> ${escapeHTML(sem.lugar)} (${escapeHTML(sem.modalidad)})</p>
                     ${htmlPromedios}
-                    <button type="button" onclick="verRetroalimentacion(${sem.id_seminario})" style="margin-top: 12px; background: var(--primary); padding: 6px 12px; font-size: 0.85rem; border-radius: 4px; border: none; cursor: pointer; color: white;">Ver Calificaciones y Retroalimentación</button>
+                    <button type="button" class="btn-retro-seminario-historial" data-id="${sem.id_seminario}" style="margin-top: 12px; background: var(--primary); padding: 6px 12px; font-size: 0.85rem; border-radius: 4px; border: none; cursor: pointer; color: white;">Ver Calificaciones y Retroalimentación</button>
                 </div>
             </div>
         `}).join('');
+
+        contenedor.querySelectorAll('.cabecera-historial-seminario').forEach(cab => {
+            cab.addEventListener('click', () => {
+                document.getElementById(cab.dataset.id).classList.toggle('hidden');
+            });
+        });
+        contenedor.querySelectorAll('.btn-retro-seminario-historial').forEach(btn => {
+            btn.addEventListener('click', () => verRetroalimentacion(parseInt(btn.dataset.id, 10)));
+        });
     }
 }
 

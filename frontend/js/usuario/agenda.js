@@ -1,5 +1,6 @@
 import { API_BASE, apiFetch } from '../shared/api.js';
 import { escapeHTML } from '../shared/dom.js';
+import { abrirEdicionAlumno } from './edicion-seminario.js';
 
 const vistaFormulario = document.getElementById('vista-formulario');
 const vistaDirectorio = document.getElementById('vista-directorio');
@@ -49,6 +50,15 @@ if (filtroProgramaAgenda) {
 const filtroFaseAgenda = document.getElementById('filtroFaseAgenda');
 if (filtroFaseAgenda) {
     filtroFaseAgenda.addEventListener('change', () => cargarAgendaBackend(1, false));
+}
+
+// delega el clic de las tarjetas de eventos, generadas dinamicamente
+const contenedorAgenda = document.getElementById('contenedorAgenda');
+if (contenedorAgenda) {
+    contenedorAgenda.addEventListener('click', (e) => {
+        const tarjeta = e.target.closest('.tarjeta-evento-agenda');
+        if (tarjeta) verDetallesAgenda(parseInt(tarjeta.dataset.id, 10));
+    });
 }
 
 export let paginaAgendaActual = 1;
@@ -138,10 +148,7 @@ export async function cargarAgendaBackend(page = 1, esCargarMas = false) {
             }
 
             html += `
-                <div style="border-left: 5px solid var(--accent); background: #f8fafc; border-radius: 8px; padding: 18px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); cursor: pointer; transition: transform 0.2s;" 
-                    onclick="verDetallesAgenda(${ev.id_seminario})" 
-                    onmouseover="this.style.transform='translateX(8px)'" 
-                    onmouseout="this.style.transform='translateX(0)'">
+                <div class="tarjeta-evento-agenda" data-id="${ev.id_seminario}" style="border-left: 5px solid var(--accent); background: #f8fafc; border-radius: 8px; padding: 18px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); cursor: pointer; transition: transform 0.2s;">
                     
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                         <strong style="color: var(--primary-dark); font-size: 1.1rem;">📅 ${escapeHTML(ev.fecha_bonita)} - ${escapeHTML(ev.hora)} hrs</strong>
@@ -158,7 +165,7 @@ export async function cargarAgendaBackend(page = 1, esCargarMas = false) {
 
         if (data.has_more) {
             contenedor.innerHTML += `
-                    <button id="btn-cargar-mas-agenda" style="background: #f1f5f9; color: var(--primary); border: 1px solid var(--border); padding: 12px 20px; border-radius: 20px; font-weight: bold; cursor: pointer; width: 100%; transition: all 0.2s; margin-top: 10px;" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='#f1f5f9'">
+                    <button id="btn-cargar-mas-agenda" style="background: #f1f5f9; color: var(--primary); border: 1px solid var(--border); padding: 12px 20px; border-radius: 20px; font-weight: bold; cursor: pointer; width: 100%; transition: all 0.2s; margin-top: 10px;">
                         ↓ Cargar más eventos ↓
                     </button>
                 `;
@@ -184,7 +191,7 @@ export async function cargarAgendaBackend(page = 1, esCargarMas = false) {
     }
 }
 
-window.verDetallesAgenda = function (idSeminario) {
+function verDetallesAgenda(idSeminario) {
     const ev = eventosAgendaEnMemoria.find(e => e.id_seminario === idSeminario);
     if (!ev) return;
 
@@ -197,7 +204,7 @@ window.verDetallesAgenda = function (idSeminario) {
             <p style="margin-bottom: 8px;"><strong>📚 Proyecto:</strong> ${escapeHTML(ev.proyecto)}</p>
             <p style="margin-bottom: 8px;"><strong>🏷️ Tipo:</strong> ${escapeHTML(ev.tipo_seminario)}</p>
             <hr style="border: 0; border-top: 1px dashed #cbd5e1; margin: 15px 0;">
-            <p style="margin-bottom: 8px;"><strong>📅 Fecha y Hora:</strong> ${escapeHTML(ev.fecha_raw)} a las ${escapeHTML(ev.hora)}</p>
+            <p style="margin-bottom: 8px;"><strong>📅 Fecha y Hora:</strong> ${escapeHTML(ev.fecha_bonita)} a las ${escapeHTML(ev.hora)}</p>
             <p style="margin-bottom: 8px;"><strong>📍 Lugar:</strong> ${escapeHTML(ev.lugar)} (${escapeHTML(ev.modalidad)})</p>
 
         ${(ev.presidente || ev.secretario || ev.vocal) ? `
@@ -216,13 +223,25 @@ window.verDetallesAgenda = function (idSeminario) {
             
             <div style="display: flex; gap: 10px; justify-content: flex-end; align-items: center; flex-wrap: wrap; margin-top: 20px; border-top: 1px solid #e5e7eb; padding-top: 15px;">
                 <button type="button" id="btnCopiarLinkDetallesAgenda" style="padding: 10px 15px; font-size: 0.95rem; border-radius: 6px; border: none; cursor: pointer; background: #059669; color: white; font-weight: bold;">🔗 Copiar enlace evaluador</button>
-                <button type="button" onclick="document.getElementById('modalDetallesAgenda').classList.add('hidden')" style="padding: 10px 15px; border-radius: 6px; border: none; cursor: pointer; background: #6b7280; color: white; font-weight: bold;">Cerrar</button>
-                <button onclick="document.getElementById('modalDetallesAgenda').classList.add('hidden'); abrirEdicionAlumno(${ev.id_seminario});" style="padding: 10px 15px; font-size: 0.95rem; border-radius: 6px; border: none; cursor: pointer; background: #d97706; color: white; font-weight: bold;">✏️ Editar Seminario</button>
+                <button type="button" id="btnCerrarDetallesAgendaModal" style="padding: 10px 15px; border-radius: 6px; border: none; cursor: pointer; background: #6b7280; color: white; font-weight: bold;">Cerrar</button>
+                <button type="button" id="btnEditarDesdeDetallesAgenda" style="padding: 10px 15px; font-size: 0.95rem; border-radius: 6px; border: none; cursor: pointer; background: #d97706; color: white; font-weight: bold;">✏️ Editar Seminario</button>
             </div>
         `;
     document.getElementById('btnCopiarLinkDetallesAgenda').addEventListener('click', () => copiarLinkEvaluador(ev.clave_acceso));
+    document.getElementById('btnCerrarDetallesAgendaModal').addEventListener('click', () => {
+        document.getElementById('modalDetallesAgenda').classList.add('hidden');
+    });
+    document.getElementById('btnEditarDesdeDetallesAgenda').addEventListener('click', () => {
+        document.getElementById('modalDetallesAgenda').classList.add('hidden');
+        abrirEdicionAlumno(ev.id_seminario);
+    });
     document.getElementById('modalDetallesAgenda').classList.remove('hidden');
 }
+
+document.getElementById('contenedorAgenda').addEventListener('click', (e) => {
+    const tarjeta = e.target.closest('.tarjeta-evento-agenda');
+    if (tarjeta) verDetallesAgenda(parseInt(tarjeta.dataset.id, 10));
+});
 
 function actualizarFiltrosFaseDinamicos(idSelectPrograma, idSelectFase) {
     const selectPrograma = document.getElementById(idSelectPrograma);

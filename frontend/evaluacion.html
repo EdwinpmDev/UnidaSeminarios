@@ -10,7 +10,7 @@
 
 <body>
 
-  <button id="btnSalirEvaluacion" class="hidden" onclick="window.location.href='/logout'">
+  <button id="btnSalirEvaluacion" class="hidden">
     Cerrar sesión / Salir
   </button>
 
@@ -35,8 +35,7 @@
 
       <div class="form-group">
         <label for="evaluador_nombre">Nombre completo (con título) *</label>
-        <input type="text" id="evaluador_nombre" placeholder="Ej. Dr. Francisco Acosta" required
-          oninput="verificarFormularioIdentificacion()">
+        <input type="text" id="evaluador_nombre" placeholder="Ej. Dr. Francisco Acosta" required>
       </div>
 
       <p id="errorPosicion" class="hidden" style="color: var(--error); font-size: 0.85rem; margin-bottom: 10px;"></p>
@@ -45,8 +44,8 @@
 
     <!-- TARJETA DE EVALUACIÓN -->
     <div class="wizard-card hidden" id="tarjeta-evaluacion">
-      <form id="evalForm" onsubmit="enviarEvaluacionCompleta(event)">
-        <!-- Guardaremos el rol seleccionado aquí en secreto para mandarlo al servidor -->
+      <form id="evalForm">
+        <!-- Se guarda el rol seleccionado aquí en secreto para mandarlo al servidor -->
         <input type="hidden" id="evaluador_rol_fijo" value="">
 
         <div
@@ -96,15 +95,14 @@
           <div id="contenedor-calificacion-directa" class="hidden form-group" style="margin-top: 25px;">
             <label style="color: var(--primary-dark);" for="calificacion_directa">Calificación directa de la fase (0 a 100) *</label>
             <input type="number" id="calificacion_directa" min="0" max="100" step="0.1"
-              placeholder="Ej. 95.5" oninput="validarComentarios()">
+              placeholder="Ej. 95.5">
           </div>
 
           <div class="form-group" style="margin-top: 25px;">
             <label style="color: var(--primary-dark);" for="txt-comentarios">Observaciones y retroalimentación (Mínimo
               50 caracteres) *</label>
             <textarea id="txt-comentarios" rows="4"
-              placeholder="Ingrese detalladamente los comentarios y correcciones del sínodo..." required
-              oninput="validarComentarios()"></textarea>
+              placeholder="Ingrese detalladamente los comentarios y correcciones del sínodo..." required></textarea>
             <div id="comentarios-info" class="char-counter">0 / 50 caracteres</div>
           </div>
         </div>

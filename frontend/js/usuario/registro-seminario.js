@@ -52,6 +52,9 @@ window.copiarLinkEvaluador = async function (clave) {
 function mostrarModalSeminarioCreado(payload, clave) {
     const link = construirLinkEvaluador(clave);
     const contenido = document.getElementById('contenidoSeminarioCreado');
+    // el input type="date" manda anio-mes-dia; aqui solo se muestra, se invierte a dia/mes/anio
+    const [anio, mes, dia] = (payload.fecha || '').split('-');
+    const fechaMostrar = (anio && mes && dia) ? `${dia}/${mes}/${anio}` : payload.fecha;
 
     contenido.innerHTML = `
         <p style="margin-bottom: 8px;"><strong>🎓 Alumno:</strong> ${escapeHTML(payload.nombre)}</p>
@@ -59,7 +62,7 @@ function mostrarModalSeminarioCreado(payload, clave) {
         <p style="margin-bottom: 8px;"><strong>📖 Programa:</strong> ${escapeHTML(payload.programa)}</p>
         <p style="margin-bottom: 8px;"><strong>📚 Proyecto:</strong> ${escapeHTML(payload.proyecto)}</p>
         <p style="margin-bottom: 8px;"><strong>🏷️ Tipo:</strong> ${escapeHTML(payload.tipo_seminario)}</p>
-        <p style="margin-bottom: 8px;"><strong>📅 Fecha y Hora:</strong> ${escapeHTML(payload.fecha)} a las ${escapeHTML(payload.hora)}</p>
+        <p style="margin-bottom: 8px;"><strong>📅 Fecha y Hora:</strong> ${escapeHTML(fechaMostrar)} a las ${escapeHTML(payload.hora)}</p>
         <p style="margin-bottom: 15px;"><strong>📍 Lugar:</strong> ${escapeHTML(payload.lugar)} (${escapeHTML(payload.modalidad)})</p>
 
         <div style="background: #f8fafc; border: 1px solid var(--border); padding: 12px; border-radius: 8px; margin-bottom: 15px;">

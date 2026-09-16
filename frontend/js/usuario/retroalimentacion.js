@@ -9,8 +9,12 @@ const retroTitulo = document.getElementById('retroTitulo');
 const btnCerrarRetro = document.getElementById('btnCerrarRetro');
 const modalDetalleEvaluacion = document.getElementById('modalDetalleEvaluacion');
 const btnCerrarDetalleEvaluacion = document.getElementById('btnCerrarDetalleEvaluacion');
+const tabsRetroContainer = document.getElementById('tabsRetroContainer');
 
-window.verRetroalimentacion = async function (idSeminario) {
+let evaluacionesActualesCache = [];
+let idSeminarioActualRetro = null;
+
+export async function verRetroalimentacion(idSeminario) {
     const semInfo = estudianteSeleccionado ? estudianteSeleccionado.seminarios.find(s => s.id_seminario === idSeminario) : null;
     const nombreEstudiante = estudianteSeleccionado ? estudianteSeleccionado.nombre : '';
     const tituloProyecto = semInfo ? semInfo.proyecto : '';
@@ -34,8 +38,8 @@ window.verRetroalimentacion = async function (idSeminario) {
             return;
         }
 
-        window.evaluacionesActualesCache = data.evaluaciones;
-        window.idSeminarioActualRetro = idSeminario;
+        evaluacionesActualesCache = data.evaluaciones;
+        idSeminarioActualRetro = idSeminario;
 
         renderizarPestanaRetro('Externo');
 
@@ -43,9 +47,9 @@ window.verRetroalimentacion = async function (idSeminario) {
         retroContenido.innerHTML = '<p style="color:#dc2626; text-align:center; padding: 20px;">Error de conexión al cargar la retroalimentación.</p>';
         console.error(error);
     }
-};
+}
 
-window.renderizarPestanaRetro = function (rolFiltro) {
+function renderizarPestanaRetro(rolFiltro) {
     document.querySelectorAll('.tab-retro').forEach(btn => {
         btn.style.background = '#f1f5f9';
         btn.style.color = '#64748b';
@@ -59,7 +63,7 @@ window.renderizarPestanaRetro = function (rolFiltro) {
         tabActiva.style.border = 'none';
     }
 
-    const evaluacionesFiltradas = window.evaluacionesActualesCache.filter(ev => ev.rol === rolFiltro);
+    const evaluacionesFiltradas = evaluacionesActualesCache.filter(ev => ev.rol === rolFiltro);
     let totalParticipantes = evaluacionesFiltradas.length;
     let sumaCalificaciones = 0;
     let promedioGlobal = 0;
@@ -76,7 +80,7 @@ window.renderizarPestanaRetro = function (rolFiltro) {
             <div>
                 <h4 style="margin: 0 0 5px 0; color: var(--primary-dark); font-size: 1.1rem;">Resumen Global (${tituloRol})</h4>
                 <p style="margin: 0; color: #4b5563; font-size: 0.95rem;">Participantes que evaluaron: <strong>${totalParticipantes}</strong></p>
-                ${totalParticipantes > 0 ? `<button type="button" onclick="preguntarDescargaMasiva('${rolFiltro}')" style="margin-top: 10px; background: #dc2626; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; transition: background 0.2s;" onmouseover="this.style.background='#b91c1c'" onmouseout="this.style.background='#dc2626'">📥 Descargar PDFs de ${tituloRol}</button>` : ''}
+                ${totalParticipantes > 0 ? `<button type="button" class="btn-descarga-masiva" data-rol="${rolFiltro}" style="margin-top: 10px; background: #dc2626; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; transition: background 0.2s;">📥 Descargar PDFs de ${tituloRol}</button>` : ''}
             </div>
             <div style="text-align: right; background: white; padding: 10px 20px; border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
                 <p style="margin: 0; font-size: 0.85rem; color: var(--muted); font-weight: bold; text-transform: uppercase;">Calificación Promedio</p>
@@ -90,7 +94,7 @@ window.renderizarPestanaRetro = function (rolFiltro) {
         listaEvaluacionesHTML = `<div style="text-align:center; padding: 30px; background: #f8fafc; border-radius: 8px; color: #64748b; font-style: italic;">Todavía ningún ${rolFiltro.toLowerCase()} ha evaluado este seminario.</div>`;
     } else {
         listaEvaluacionesHTML = evaluacionesFiltradas.map((ev) => {
-            const indexGlobal = window.evaluacionesActualesCache.findIndex(e => e === ev);
+            const indexGlobal = evaluacionesActualesCache.findIndex(e => e === ev);
             return `
             <div style="border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 8px; padding: 18px; margin-bottom: 15px; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.02);">
                 <div style="display:flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
@@ -105,26 +109,47 @@ window.renderizarPestanaRetro = function (rolFiltro) {
                 </div>
                 
                 <div style="display: flex; gap: 10px; margin-top: 15px; border-top: 1px dashed var(--border); padding-top: 15px;">
-                    <button type="button" onclick="verDetalleCuestionario(${indexGlobal})" style="background: var(--primary); color: white; padding: 8px 15px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9rem; flex: 1; transition: background 0.2s;" onmouseover="this.style.background='var(--primary-dark)'" onmouseout="this.style.background='var(--primary)'">👁️ Ver Evaluación</button>
-                    <button type="button" onclick="descargarPDF(${indexGlobal})" style="background: #f1f5f9; color: var(--primary); border: 1px solid var(--border); padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9rem; flex: 1; transition: background 0.2s;" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='#f1f5f9'">📄 Descargar PDF</button>
+                    <button type="button" class="btn-ver-detalle-cuestionario" data-index="${indexGlobal}" style="background: var(--primary); color: white; padding: 8px 15px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9rem; flex: 1; transition: background 0.2s;">👁️ Ver Evaluación</button>
+                    <button type="button" class="btn-descargar-pdf-individual" data-index="${indexGlobal}" style="background: #f1f5f9; color: var(--primary); border: 1px solid var(--border); padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9rem; flex: 1; transition: background 0.2s;">📄 Descargar PDF</button>
                 </div>
             </div>
         `}).join('');
     }
 
     retroContenido.innerHTML = panelSuperiorHTML + listaEvaluacionesHTML;
-};
+}
+
+// delega los clics de las pestañas y del contenido, ambos generados/actualizados dinamicamente
+if (tabsRetroContainer) {
+    tabsRetroContainer.addEventListener('click', (e) => {
+        const tab = e.target.closest('.tab-retro');
+        if (tab) renderizarPestanaRetro(tab.dataset.rol);
+    });
+}
+
+if (retroContenido) {
+    retroContenido.addEventListener('click', (e) => {
+        const btnMasiva = e.target.closest('.btn-descarga-masiva');
+        if (btnMasiva) { preguntarDescargaMasiva(btnMasiva.dataset.rol); return; }
+
+        const btnDetalle = e.target.closest('.btn-ver-detalle-cuestionario');
+        if (btnDetalle) { verDetalleCuestionario(parseInt(btnDetalle.dataset.index, 10)); return; }
+
+        const btnPdf = e.target.closest('.btn-descargar-pdf-individual');
+        if (btnPdf) { descargarPDF(parseInt(btnPdf.dataset.index, 10)); }
+    });
+}
 
 let rolDescargaTemporal = '';
 
-window.preguntarDescargaMasiva = function (rolFiltro) {
+function preguntarDescargaMasiva(rolFiltro) {
     rolDescargaTemporal = rolFiltro;
     document.getElementById('modalOpcionesDescargaPDF').classList.remove('hidden');
-};
+}
 
 // DIBUJA EL CUESTIONARIO VISUAL
-window.verDetalleCuestionario = function (index) {
-    const ev = window.evaluacionesActualesCache[index];
+function verDetalleCuestionario(index) {
+    const ev = evaluacionesActualesCache[index];
     if (!ev) return;
 
     document.getElementById('detalleEvalSubtitulo').innerHTML = `<strong>Evaluador:</strong> ${escapeHTML(ev.nombre)} | <strong>Rol:</strong> ${escapeHTML(ev.rol)} | <strong>Fecha:</strong> ${escapeHTML(ev.fecha) || 'N/A'}`;
@@ -169,7 +194,7 @@ window.verDetalleCuestionario = function (index) {
 
         htmlCuestionario += `
             <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 12px;">
-                <div style="font-size: 0.95rem; font-weight: 600; color: var(--primary-dark); margin-bottom: 10px;">P${idx + 1}. ${r.texto}</div>
+                <div style="font-size: 0.95rem; font-weight: 600; color: var(--primary-dark); margin-bottom: 10px;">P${idx + 1}. ${escapeHTML(r.texto)}</div>
                 <div style="display: flex; gap: 4px; flex-wrap: wrap;">${opcionesHtml}</div>
             </div>
         `;
@@ -177,7 +202,7 @@ window.verDetalleCuestionario = function (index) {
 
     contenedorCuestionario.innerHTML = htmlCuestionario;
     modalDetalleEvaluacion.classList.remove('hidden');
-};
+}
 
 // LISTENERS DE CIERRE DE MODALES
 if (btnCerrarRetro) {
@@ -208,6 +233,13 @@ document.addEventListener("DOMContentLoaded", () => {
             descargarTodosPDF(rolDescargaTemporal, true);
         });
     }
+
+    const btnCerrarModalOpcionesDescargaPDF = document.getElementById('btnCerrarModalOpcionesDescargaPDF');
+    if (btnCerrarModalOpcionesDescargaPDF) {
+        btnCerrarModalOpcionesDescargaPDF.addEventListener('click', () => {
+            document.getElementById('modalOpcionesDescargaPDF').classList.add('hidden');
+        });
+    }
 });
 
 // PDF'S
@@ -219,16 +251,16 @@ function descargarDesdeUrl(url) {
     enlace.remove();
 }
 
-window.descargarPDF = function (index) {
-    const ev = window.evaluacionesActualesCache[index];
+function descargarPDF(index) {
+    const ev = evaluacionesActualesCache[index];
     if (!ev || !ev.id) return;
 
     descargarDesdeUrl(`${API_BASE}/evaluacion-pdf/${ev.id}`);
-};
+}
 
-window.descargarTodosPDF = function (rolFiltro, individuales = false) {
-    if (!window.idSeminarioActualRetro) return;
+function descargarTodosPDF(rolFiltro, individuales = false) {
+    if (!idSeminarioActualRetro) return;
 
     const ruta = individuales ? 'evaluaciones-zip' : 'evaluaciones-pdf';
-    descargarDesdeUrl(`${API_BASE}/${ruta}/${window.idSeminarioActualRetro}?rol=${encodeURIComponent(rolFiltro)}`);
-};
+    descargarDesdeUrl(`${API_BASE}/${ruta}/${idSeminarioActualRetro}?rol=${encodeURIComponent(rolFiltro)}`);
+}

@@ -144,7 +144,7 @@ function precargarCampoDuracion(valorGuardado) {
     }
 }
 
-window.abrirEdicionAlumno = async function (idSeminario) {
+export async function abrirEdicionAlumno(idSeminario) {
     msgEditarAlumno.textContent = '';
     modalEditarAlumno.classList.remove('hidden');
     try {
@@ -183,7 +183,7 @@ window.abrirEdicionAlumno = async function (idSeminario) {
         msgEditarAlumno.textContent = '⚠️ Error de conexión con el servidor.';
         console.error(error);
     }
-};
+}
 
 if (btnCerrarEditarAlumno) {
     btnCerrarEditarAlumno.addEventListener('click', () => modalEditarAlumno.classList.add('hidden'));

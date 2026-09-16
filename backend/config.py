@@ -11,6 +11,11 @@ JWT_SECRET = os.getenv("JWT_SECRET")
 if not JWT_SECRET:
     raise ValueError("CRÍTICO: JWT_SECRET no encontrado en el archivo .env")
 
+# Secure de las cookies: independiente de DEBUG para no exponerlas por error
+FORCE_SECURE_COOKIES = os.getenv("FORCE_SECURE_COOKIES", "True").lower() == "true"
+if not DEBUG_MODE and not FORCE_SECURE_COOKIES:
+    raise ValueError("CRÍTICO: no se puede arrancar en producción (DEBUG=False) con FORCE_SECURE_COOKIES=False, las cookies viajarían sin cifrar")
+
 # --- BASE DE DATOS ---
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
@@ -19,6 +24,8 @@ if not DATABASE_URL:
 # --- ADMINISTRADOR INICIAL ---
 ADMIN_USER = os.getenv("ADMIN_USER")
 ADMIN_PASS = os.getenv("ADMIN_PASS")
+BACKUP_GPG_RECIPIENT = os.getenv("BACKUP_GPG_RECIPIENT")
+REDIS_URL = os.getenv("REDIS_URL")
 
 # --- RUTAS ---
 FRONTEND_PATH = os.path.join(os.path.dirname(__file__), '../frontend')
@@ -27,7 +34,6 @@ FRONTEND_PATH = os.path.join(os.path.dirname(__file__), '../frontend')
 CORS_ORIGINS = [
     "http://127.0.0.1:5000",
     "http://localhost:5000",
-    "http://192.168.100.11:5000",
 ]
 
 CORS_ORIGINS_EXTRA = os.getenv("CORS_ORIGINS_EXTRA", "")

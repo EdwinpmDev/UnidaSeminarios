@@ -1,4 +1,4 @@
-import { AUTH, setManejadorSesionExpirada } from './api.js';
+import { AUTH, API_BASE, csrfHeaders, setManejadorSesionExpirada } from './api.js';
 
 const loginOverlay = document.getElementById('loginOverlay');
 const loginUser = document.getElementById('loginUser');
@@ -46,12 +46,15 @@ export function aplicarRestriccionesRol() {
     }
 }
 
-export function logout() {
-    window.location.href = '/logout';
+export async function logout() {
+    try {
+        await fetch(`${API_BASE}/logout`, { method: 'POST', headers: csrfHeaders() });
+    } finally {
+        window.location.href = '/';
+    }
 }
 
-// apiFetch (en shared/api.js) no conoce el DOM de usuario.html;
-// aquí se registra qué hacer exactamente cuando detecta un 401.
+// apiFetch (en shared/api.js) no conoce el DOM de usuario.html: aquí se registra qué hacer exactamente cuando detecta un 401
 setManejadorSesionExpirada((mensaje) => {
     const panelAdmin = document.getElementById('panelAdmin');
     if (panelAdmin) panelAdmin.classList.add('hidden');

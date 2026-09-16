@@ -1,5 +1,6 @@
 import { API_BASE, apiFetch } from '../shared/api.js';
 import { mostrarToast, mostrarModalConfirmacion } from '../shared/toast.js';
+import { logout } from '../shared/auth.js';
 
 const btnEditarMiPerfilAdmin = document.getElementById('btnEditarMiPerfilAdmin');
 const modalEditarAdmin = document.getElementById('modalEditarAdmin');
@@ -73,7 +74,7 @@ if (btnGuardarEditarAdmin) {
                     setTimeout(() => {
                         modalEditarAdmin.classList.add('hidden');
                         mostrarToast("Tus datos han sido actualizados. Por seguridad, deberás iniciar sesión nuevamente con tus credenciales.", 'exito');
-                        setTimeout(() => { window.location.href = '/logout'; }, 1500);
+                        setTimeout(() => { logout(); }, 1500);
                     }, 1500);
                 } else {
                     msgEditarAdmin.style.color = 'red';

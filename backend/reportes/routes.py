@@ -11,7 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from extensions import Session
 from models import Estudiante, Seminario, UsuarioEvaluador, Evaluacion
-from utils import aplicar_formato_excel, calcular_ventana_evaluacion, parsear_jurado, sanitizar_celda_excel
+from utils import aplicar_formato_excel, calcular_ventana_evaluacion, escribir_celda_texto, parsear_jurado
 from reportes.pdf_generator import construir_ev_dict, renderizar_pdf, nombre_archivo_evaluacion
 
 from auth.decorators import admin_requerido, token_requerido
@@ -31,7 +31,8 @@ def descargar_reporte():
         ws = wb.active
         ws.title = "Directorio de alumnos"
 
-        ws.append(['No. Control', 'Nombre de alumno', 'Programa', 'Seminarios activos', 'Seminarios evaluados', 'Proyectos Registrados'])
+        for col, titulo in enumerate(['No. Control', 'Nombre de alumno', 'Programa', 'Seminarios activos', 'Seminarios evaluados', 'Proyectos Registrados'], start=1):
+            ws.cell(row=1, column=col, value=titulo)
 
         query = session.query(Estudiante).options(
             selectinload(Estudiante.seminarios).selectinload(Seminario.evaluaciones)
@@ -43,6 +44,7 @@ def descargar_reporte():
             query = query.filter(Estudiante.seminarios.any(Seminario.tipo_seminario == fase_filtro))
 
         estudiantes = query.all()
+        fila = 2
         for est in estudiantes:
             activos = 0
             evaluados = 0
@@ -57,14 +59,13 @@ def descargar_reporte():
 
             proyectos_str = " | ".join(nombres_proyectos) if nombres_proyectos else "Sin proyectos"
 
-            ws.append([
-                sanitizar_celda_excel(est.usuarioAlumno),
-                sanitizar_celda_excel(est.nombre),
-                sanitizar_celda_excel(est.programa),
-                activos,
-                evaluados,
-                sanitizar_celda_excel(proyectos_str),
-            ])
+            escribir_celda_texto(ws, fila, 1, est.usuarioAlumno)
+            escribir_celda_texto(ws, fila, 2, est.nombre)
+            escribir_celda_texto(ws, fila, 3, est.programa)
+            escribir_celda_texto(ws, fila, 4, activos)
+            escribir_celda_texto(ws, fila, 5, evaluados)
+            escribir_celda_texto(ws, fila, 6, proyectos_str)
+            fila += 1
 
         aplicar_formato_excel(ws)
 
@@ -93,7 +94,8 @@ def descargar_agenda():
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = "Agenda filtrada"
-        ws.append(['Fecha', 'Hora', 'Lugar', 'Modalidad', 'Estudiante', 'No. Control', 'Tipo de seminario', 'Proyecto'])
+        for col, titulo in enumerate(['Fecha', 'Hora', 'Lugar', 'Modalidad', 'Estudiante', 'No. Control', 'Tipo de seminario', 'Proyecto'], start=1):
+            ws.cell(row=1, column=col, value=titulo)
 
         query = session.query(Seminario).join(Estudiante)
 
@@ -108,21 +110,21 @@ def descargar_agenda():
 
         seminarios = query.order_by(Seminario.fecha.asc(), Seminario.hora.asc()).all()
 
+        fila = 2
         for s in seminarios:
             if not s.fecha:
                 continue
 
             hora_str = s.hora.strftime('%H:%M') if s.hora else 'Sin hora'
-            ws.append([
-                str(s.fecha),
-                hora_str,
-                sanitizar_celda_excel(s.lugar),
-                sanitizar_celda_excel(s.modalidad),
-                sanitizar_celda_excel(s.estudiante.nombre),
-                sanitizar_celda_excel(s.estudiante.usuarioAlumno),
-                sanitizar_celda_excel(s.tipo_seminario),
-                sanitizar_celda_excel(s.proyecto),
-            ])
+            escribir_celda_texto(ws, fila, 1, s.fecha.strftime("%d/%m/%Y"))
+            escribir_celda_texto(ws, fila, 2, hora_str)
+            escribir_celda_texto(ws, fila, 3, s.lugar)
+            escribir_celda_texto(ws, fila, 4, s.modalidad)
+            escribir_celda_texto(ws, fila, 5, s.estudiante.nombre)
+            escribir_celda_texto(ws, fila, 6, s.estudiante.usuarioAlumno)
+            escribir_celda_texto(ws, fila, 7, s.tipo_seminario)
+            escribir_celda_texto(ws, fila, 8, s.proyecto)
+            fila += 1
 
         aplicar_formato_excel(ws)
 
@@ -214,7 +216,7 @@ def agenda_paginada():
         }), 200
     except Exception as e:
         current_app.logger.error(f"Error en agenda paginada: {e}")
-        return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({"success": False, "mensaje": "Ocurrió un error interno. Intenta de nuevo."}), 500
     finally:
         session.close()
 
@@ -241,17 +243,22 @@ def agenda_anios_disponibles():
 
 @reportes_bp.route("/descargar-docentes", methods=["GET"])
 @admin_requerido
+# exporta el directorio de docentes a excel, sin exponer el id interno
 def descargar_docentes():
     session = Session()
     try:
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = "Directorio de docentes"
-        ws.append(['ID de base de datos', 'Nombre completo', 'Usuario de acceso'])
+        for col, titulo in enumerate(['Nombre completo', 'Usuario de acceso'], start=1):
+            ws.cell(row=1, column=col, value=titulo)
 
         docentes = session.query(UsuarioEvaluador).filter_by(es_admin=False).all()
+        fila = 2
         for d in docentes:
-            ws.append([d.id, sanitizar_celda_excel(d.nombre_completo), sanitizar_celda_excel(d.usuario)])
+            escribir_celda_texto(ws, fila, 1, d.nombre_completo)
+            escribir_celda_texto(ws, fila, 2, d.usuario)
+            fila += 1
 
         aplicar_formato_excel(ws)
 

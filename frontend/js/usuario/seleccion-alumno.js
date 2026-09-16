@@ -22,6 +22,11 @@ if (btnAbrirSeleccion) {
     });
 }
 
+const btnCerrarModalSeleccionAlumno = document.getElementById('btnCerrarModalSeleccionAlumno');
+if (btnCerrarModalSeleccionAlumno) {
+    btnCerrarModalSeleccionAlumno.addEventListener('click', () => modalSeleccionAlumno.classList.add('hidden'));
+}
+
 if (btnBorrarSeleccion) {
     btnBorrarSeleccion.addEventListener('click', () => {
         ['usuarioAlumno', 'password_estudiante', 'nombre', 'correo', 'programa'].forEach(id => {
@@ -93,10 +98,8 @@ async function buscarAlumnosSimple(textoBusqueda, page, esCargarMas) {
                     <td style="padding: 10px 8px; vertical-align: middle; font-weight: 600;">${escapeHTML(est.usuarioAlumno)}</td>
                     <td style="padding: 10px 8px; text-align: center; vertical-align: middle;">
                         <button type="button" 
-                            onclick="seleccionarAlumnoExistente('${est.usuarioAlumno}')" 
-                            style="padding: 6px 12px; font-size: 0.85rem; font-weight: bold; background: #16a34a; color: white; border: none; border-radius: 6px; cursor: pointer; min-width: 100px; transition: background 0.2s;" 
-                            onmouseover="this.style.background='#15803d'" 
-                            onmouseout="this.style.background='#16a34a'">
+                            class="btn-seleccionar-alumno" data-control="${escapeHTML(est.usuarioAlumno)}"
+                            style="padding: 6px 12px; font-size: 0.85rem; font-weight: bold; background: #16a34a; color: white; border: none; border-radius: 6px; cursor: pointer; min-width: 100px; transition: background 0.2s;">
                             Seleccionar
                         </button>
                     </td>
@@ -108,7 +111,7 @@ async function buscarAlumnosSimple(textoBusqueda, page, esCargarMas) {
             tablaSeleccionBody.innerHTML += `
                 <tr id="fila-cargar-mas">
                     <td colspan="3" style="text-align:center; padding: 15px;">
-                        <button type="button" id="btn-cargar-mas" style="background: #f1f5f9; color: var(--primary); border: 1px solid var(--border); padding: 8px 20px; border-radius: 20px; font-weight: bold; cursor: pointer; width: 100%; transition: all 0.2s;" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='#f1f5f9'">↓ Mostrar más alumnos ↓</button>
+                        <button type="button" id="btn-cargar-mas" style="background: #f1f5f9; color: var(--primary); border: 1px solid var(--border); padding: 8px 20px; border-radius: 20px; font-weight: bold; cursor: pointer; width: 100%; transition: all 0.2s;">↓ Mostrar más alumnos ↓</button>
                     </td>
                 </tr>
             `;
@@ -135,7 +138,15 @@ async function buscarAlumnosSimple(textoBusqueda, page, esCargarMas) {
     }
 }
 
-window.seleccionarAlumnoExistente = function (control, nombre, correo, programa) {
+// delega el clic de "Seleccionar" de la tabla, generada dinamicamente
+if (tablaSeleccionBody) {
+    tablaSeleccionBody.addEventListener('click', (e) => {
+        const btn = e.target.closest('.btn-seleccionar-alumno');
+        if (btn) seleccionarAlumnoExistente(btn.dataset.control);
+    });
+}
+
+function seleccionarAlumnoExistente(control, nombre, correo, programa) {
     if (nombre === undefined) {
         const est = cacheAlumnosBusqueda[control];
         if (!est) return;
@@ -181,7 +192,7 @@ window.seleccionarAlumnoExistente = function (control, nombre, correo, programa)
 
     modalSeleccionAlumno.classList.add('hidden');
     btnBorrarSeleccion.classList.remove('hidden');
-};
+}
 
 const modalAlumnoDuplicado = document.getElementById('modalAlumnoDuplicado');
 const btnCerrarAlumnoDuplicado = document.getElementById('btnCerrarAlumnoDuplicado');

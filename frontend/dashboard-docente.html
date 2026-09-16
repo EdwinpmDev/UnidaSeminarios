@@ -15,7 +15,7 @@
       <h1>UNIDA — Panel del Docente</h1>
       <p>Bienvenido, <span id="nombre-docente">...</span></p>
     </div>
-    <a href="/logout" class="btn-salir">Cerrar sesión</a>
+    <button type="button" id="btnLogoutDocente" class="btn-salir">Cerrar sesión</button>
   </header>
 
   <main>
@@ -65,10 +65,10 @@
         <div id="no-disponible-aviso" class="aviso-ventana hidden"></div>
 
         <button type="button" class="btn-submit" id="btn-comenzar-evaluacion">Comenzar evaluación</button>
-        <button type="button" class="btn-secondary" style="width:100%; margin-top:10px;" onclick="document.getElementById('btn-cerrar-modal').click()">Cerrar ventana</button>
+        <button type="button" id="btn-cerrar-ventana-previa" class="btn-secondary" style="width:100%; margin-top:10px;">Cerrar ventana</button>
       </div>
 
-      <form id="form-evaluacion-docente" class="hidden" onsubmit="return false;">
+      <form id="form-evaluacion-docente" class="hidden">
         <h4 id="subtitulo-oral" class="subtitulo-form">I. Exposición Oral (P1 a P8 — Escala del 1 al 10)</h4>
         <div id="quest-container-10"></div>
 

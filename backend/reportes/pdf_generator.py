@@ -193,7 +193,7 @@ def construir_ev_dict(evaluacion):
         "nombre": evaluacion.evaluador_nombre,
         "calificacion": evaluacion.calificacion_final,
         "comentarios": evaluacion.comentarios,
-        "fecha": evaluacion.fecha_evaluacion.strftime("%Y-%m-%d %H:%M") if evaluacion.fecha_evaluacion else "",
+        "fecha": evaluacion.fecha_evaluacion.strftime("%d/%m/%Y %H:%M") if evaluacion.fecha_evaluacion else "",
         "respuestas": json.loads(evaluacion.respuestas_detalle) if evaluacion.respuestas_detalle else None,
         "proyecto": seminario.proyecto if seminario else "",
         "etapa": seminario.tipo_seminario if seminario else "",

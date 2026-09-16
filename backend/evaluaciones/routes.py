@@ -4,7 +4,7 @@ import jwt
 import json
 from flask import Blueprint, current_app, jsonify, make_response, request
 
-from config import DEBUG_MODE, JWT_SECRET
+from config import FORCE_SECURE_COOKIES, JWT_SECRET
 from extensions import Session, limiter
 from models import Evaluacion, Seminario
 from utils import (
@@ -15,6 +15,7 @@ from utils import (
     limpiar_texto_libre,
     parsear_jurado,
     validar_longitud,
+    validar_y_reconstruir_respuestas,
 )
 
 from auth.decorators import csrf_protegido, generar_jti, limpiar_cookies_sesion, set_cookies_sesion, token_esta_revocado, validar_json, token_requerido
@@ -64,7 +65,7 @@ def validar_posicion():
             JWT_SECRET, algorithm="HS256"
         )
         respuesta = make_response(jsonify({"success": True}))
-        set_cookies_sesion(respuesta, nuevo_token, csrf_token, secure=not DEBUG_MODE)
+        set_cookies_sesion(respuesta, nuevo_token, csrf_token, secure=FORCE_SECURE_COOKIES)
         return respuesta
     finally:
         session.close()
@@ -129,16 +130,14 @@ def guardar_evaluacion():
 
             snapshot = []
         else:
-            snapshot = data.get("respuestas")
-            if not snapshot or not isinstance(snapshot, list):
-                return jsonify({"success": False, "mensaje": "Faltan las respuestas del cuestionario"}), 400
+            snapshot, error = validar_y_reconstruir_respuestas(
+                data.get("respuestas"), seminario.estudiante.programa, seminario.tipo_seminario
+            )
+            if error:
+                return jsonify({"success": False, "mensaje": error}), 400
 
-            suma_puntajes, suma_escalas = 0.0, 0.0
-            for item in snapshot:
-                if item.get("puntaje") is None or item.get("escala_maxima") is None:
-                    return jsonify({"success": False, "mensaje": "Respuesta incompleta en el cuestionario"}), 400
-                suma_puntajes += float(item["puntaje"])
-                suma_escalas += float(item["escala_maxima"])
+            suma_puntajes = sum(r["puntaje"] for r in snapshot)
+            suma_escalas = sum(r["escala_maxima"] for r in snapshot)
 
             if suma_escalas == 0:
                 return jsonify({"success": False, "mensaje": "Cuestionario inválido"}), 400
@@ -227,7 +226,7 @@ def obtener_retroalimentacion(id_seminario):
                     "nombre": e.evaluador_nombre, 
                     "calificacion": e.calificacion_final, 
                     "comentarios": e.comentarios,
-                    "fecha": e.fecha_evaluacion.strftime("%Y-%m-%d %H:%M") if e.fecha_evaluacion else "",
+                    "fecha": e.fecha_evaluacion.strftime("%d/%m/%Y %H:%M") if e.fecha_evaluacion else "",
                     "respuestas": json.loads(e.respuestas_detalle) if e.respuestas_detalle else None
                 } for e in evaluaciones
             ]

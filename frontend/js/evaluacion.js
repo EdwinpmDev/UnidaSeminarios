@@ -2,6 +2,18 @@ import { API_BASE, csrfHeaders } from './shared/api.js';
 import { escapeHTML } from './shared/dom.js';
 import { mostrarToast } from './shared/toast.js';
 
+// cierra sesion via POST y regresa al login
+const btnSalirEvaluacion = document.getElementById('btnSalirEvaluacion');
+if (btnSalirEvaluacion) {
+    btnSalirEvaluacion.addEventListener('click', async () => {
+        try {
+            await fetch(`${API_BASE}/logout`, { method: 'POST', headers: csrfHeaders() });
+        } finally {
+            window.location.href = '/';
+        }
+    });
+}
+
 function mostrarModalAviso(mensaje) {
     let overlay = document.getElementById('modalAvisoGlobal');
     if (!overlay) {
@@ -38,9 +50,10 @@ let FASES_DIRECTAS = [];
 
 const gatePosicion = document.getElementById('gate-posicion');
 const tarjetaEvaluacion = document.getElementById('tarjeta-evaluacion');
-const codigoPosicionInput = document.getElementById('codigo_posicion');
 const errorPosicion = document.getElementById('errorPosicion');
 const btnValidarPosicion = document.getElementById('btnValidarPosicion');
+const inputEvaluadorNombre = document.getElementById('evaluador_nombre');
+const evalForm = document.getElementById('evalForm');
 
 document.addEventListener("DOMContentLoaded", async () => {
 
@@ -140,7 +153,9 @@ function verificarFormularioIdentificacion() {
     }
 }
 
-window.verificarFormularioIdentificacion = verificarFormularioIdentificacion;
+if (inputEvaluadorNombre) {
+    inputEvaluadorNombre.addEventListener('input', verificarFormularioIdentificacion);
+}
 
 
 function mostrarFormularioConRol(rol, nombre) {
@@ -219,7 +234,7 @@ function construirQuest(preguntas) {
             for (let j = 1; j <= p.escala_maxima; j++) {
                 optionsHtml += `
                 <div class="scale-box">
-                    <input type="radio" id="P${p.id}-${j}" name="P${p.id}" value="${j}" required onchange="validarComentarios()">
+                    <input type="radio" id="P${p.id}-${j}" name="P${p.id}" value="${j}" required>
                     <label for="P${p.id}-${j}">${j}</label>
                 </div>`;
             }
@@ -249,7 +264,15 @@ function validarComentarios() {
     }
 }
 
-window.validarComentarios = validarComentarios;
+if (evalForm) {
+    evalForm.addEventListener('change', (e) => {
+        if (e.target.matches('input[type="radio"]')) validarComentarios();
+    });
+    evalForm.addEventListener('input', (e) => {
+        if (e.target.id === 'txt-comentarios' || e.target.id === 'calificacion_directa') validarComentarios();
+    });
+    evalForm.addEventListener('submit', enviarEvaluacionCompleta);
+}
 
 async function enviarEvaluacionCompleta(event) {
     event.preventDefault();
@@ -263,8 +286,7 @@ async function enviarEvaluacionCompleta(event) {
         evaluador_rol: document.getElementById('evaluador_rol_fijo').value,
         comentarios: document.getElementById('txt-comentarios').value.trim(),
         respuestas: esFaseDirecta ? [] : preguntasActuales.map(p => ({
-            texto: p.texto,
-            escala_maxima: p.escala_maxima,
+            id: p.id,
             puntaje: Number(document.querySelector(`input[name="P${p.id}"]:checked`).value)
         }))
     };
@@ -307,4 +329,3 @@ async function enviarEvaluacionCompleta(event) {
         btnSubmit.textContent = "Enviar evaluación final";
     }
 }
-window.enviarEvaluacionCompleta = enviarEvaluacionCompleta;

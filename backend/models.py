@@ -15,6 +15,7 @@ class UsuarioEvaluador(Base):
     password_hash = Column(String(255), nullable=False)
     nombre_completo = Column(String(100), nullable=False)
     es_admin = Column(Boolean, default=False, nullable=False)
+    token_version = Column(Integer, default=1, nullable=False)  # se incrementa al cambiar password para invalidar JWTs viejos
 
     def verificar_password(self, password):
         return check_password_hash(self.password_hash, password)
@@ -28,6 +29,7 @@ class Estudiante(Base):
     nombre = Column(String(100), nullable=False)
     correo = Column(String(150), nullable=False)
     programa = Column(String(50), nullable=False)
+    token_version = Column(Integer, default=1, nullable=False)  # se incrementa al cambiar password para invalidar JWTs viejos
 
     seminarios = relationship("Seminario", back_populates="estudiante", cascade="all, delete-orphan")
 
@@ -84,3 +86,16 @@ class TokenRevocado(Base):
     jti = Column(String(36), unique=True, nullable=False, index=True)
     fecha_expiracion = Column(DateTime, nullable=False, index=True)
     fecha_creacion = Column(DateTime, default=lambda: datetime.now(ZoneInfo("America/Mexico_City")))
+
+
+class IntentoLogin(Base):
+    __tablename__ = "intentos_login"
+    __table_args__ = (
+        UniqueConstraint("ip", "usuario", name="uq_intentos_ip_usuario"),
+    )
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    ip = Column(String(45), nullable=False, index=True)
+    usuario = Column(String(100), nullable=False, index=True)
+    intentos = Column(Integer, default=0, nullable=False)
+    ultimo_intento = Column(DateTime, nullable=True)
+    bloqueado_hasta = Column(DateTime, nullable=True)

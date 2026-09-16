@@ -13,6 +13,7 @@ from utils import (
     limpiar_texto_libre,
     parsear_jurado,
     validar_longitud,
+    validar_y_reconstruir_respuestas,
 )
 
 from auth.decorators import admin_requerido, csrf_protegido, token_requerido, validar_json
@@ -52,7 +53,8 @@ def obtener_docentes():
         }), 200
     except Exception as e:
         session.rollback()
-        return jsonify({"success": False, "error": str(e)}), 500
+        current_app.logger.error(f"error al listar docentes: {e}")
+        return jsonify({"success": False, "mensaje": "Ocurrió un error interno. Intenta de nuevo."}), 500
     finally:
         session.close()
 
@@ -109,6 +111,7 @@ def editar_docente(id_docente):
         docente.nombre_completo, docente.usuario = data.get("nombre_completo", "").strip(), usuario_nuevo
         if data.get("password"):
             docente.password_hash = generate_password_hash(data.get("password").strip(), method="pbkdf2:sha256", salt_length=16)
+            docente.token_version += 1  # invalida cualquier jwt viejo de este docente
 
         session.commit()
         return jsonify({"success": True, "mensaje": "Docente actualizado."})
@@ -163,6 +166,7 @@ def editar_perfil_admin():
 
         if password_nueva:
             admin.password_hash = generate_password_hash(password_nueva, method="pbkdf2:sha256", salt_length=16)
+            admin.token_version += 1  # invalida cualquier jwt viejo del admin
 
         session.commit()
         return jsonify({"success": True, "mensaje": "Tus datos han sido actualizados."})
@@ -245,7 +249,8 @@ def info_previa_seminario(id_seminario):
             "programa": sem.estudiante.programa,
             "proyecto": sem.proyecto,
             "tipo_seminario": sem.tipo_seminario,
-            "fecha": str(sem.fecha) if sem.fecha else "",
+            "fecha": sem.fecha.strftime("%d/%m/%Y") if sem.fecha else "",
+            "fecha_raw": str(sem.fecha) if sem.fecha else "",
             "hora": sem.hora.strftime("%H:%M") if sem.hora else "",
             "lugar": sem.lugar or "",
             "modalidad": sem.modalidad or "",
@@ -306,16 +311,14 @@ def evaluar_como_docente(id_seminario):
 
             snapshot = []
         else:
-            snapshot = data.get("respuestas")
-            if not snapshot or not isinstance(snapshot, list):
-                return jsonify({"success": False, "mensaje": "Faltan las respuestas del cuestionario"}), 400
+            snapshot, error = validar_y_reconstruir_respuestas(
+                data.get("respuestas"), sem.estudiante.programa, sem.tipo_seminario
+            )
+            if error:
+                return jsonify({"success": False, "mensaje": error}), 400
 
-            suma_puntajes, suma_escalas = 0.0, 0.0
-            for item in snapshot:
-                if item.get("puntaje") is None or item.get("escala_maxima") is None:
-                    return jsonify({"success": False, "mensaje": "Respuesta incompleta en el cuestionario"}), 400
-                suma_puntajes += float(item["puntaje"])
-                suma_escalas += float(item["escala_maxima"])
+            suma_puntajes = sum(r["puntaje"] for r in snapshot)
+            suma_escalas = sum(r["escala_maxima"] for r in snapshot)
 
             if suma_escalas == 0:
                 return jsonify({"success": False, "mensaje": "Cuestionario inválido"}), 400

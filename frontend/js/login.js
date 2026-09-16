@@ -39,15 +39,11 @@ function cambiarPestañaPrincipal(rolId) {
         conmutarSubFormulario('estudiante');
     }
 }
-// Llamada desde onclick="cambiarPestañaPrincipal(...)" en login.html
-window.cambiarPestañaPrincipal = cambiarPestañaPrincipal;
 
 function conmutarSubFormulario(subRol) {
     document.querySelectorAll('.sub-form-content').forEach(sf => sf.classList.remove('active'));
     document.getElementById('sub-form-' + subRol).classList.add('active');
 }
-// Llamada desde onclick="conmutarSubFormulario(...)" en login.html
-window.conmutarSubFormulario = conmutarSubFormulario;
 
 // Bloqueo temporal tras exceder intentos de login (HTTP 429)
 function iniciarCuentaRegresivaBloqueo(segundosIniciales, btnSubmit, errorBox, textoBotonNormal) {
@@ -219,6 +215,14 @@ async function manejarLoginEstudiante(e, destino) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+    document.querySelectorAll('.tab-button[data-rol]').forEach(btn => {
+        btn.addEventListener('click', () => cambiarPestañaPrincipal(btn.dataset.rol));
+    });
+
+    document.querySelectorAll('.btn-switch-link[data-subrol]').forEach(btn => {
+        btn.addEventListener('click', () => conmutarSubFormulario(btn.dataset.subrol));
+    });
+
     const formProfesor = document.querySelector('#tab-profesor form');
     if (formProfesor) {
         formProfesor.addEventListener('submit', (e) => manejarLogin(e, './usuario.html'));

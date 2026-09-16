@@ -2,6 +2,18 @@ import { API_BASE, csrfHeaders } from './shared/api.js';
 import { escapeHTML } from './shared/dom.js';
 import { mostrarToast } from './shared/toast.js';
 
+// cierra sesion via POST y regresa al login
+const btnLogoutDocente = document.getElementById('btnLogoutDocente');
+if (btnLogoutDocente) {
+    btnLogoutDocente.addEventListener('click', async () => {
+        try {
+            await fetch(`${API_BASE}/logout`, { method: 'POST', headers: csrfHeaders() });
+        } finally {
+            window.location.href = '/';
+        }
+    });
+}
+
 const NOMBRES_MES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 
 let seminariosDelMes = [];
@@ -307,6 +319,10 @@ document.getElementById('btn-cerrar-modal').addEventListener('click', () => {
     idSeminarioActivo = null;
 });
 
+document.getElementById('btn-cerrar-ventana-previa').addEventListener('click', () => {
+    document.getElementById('btn-cerrar-modal').click();
+});
+
 btnComenzarEvaluacion.addEventListener('click', () => {
     vistaInfoPrevia.classList.add('hidden');
     formEvaluacion.classList.remove('hidden');
@@ -328,7 +344,7 @@ function construirPreguntas(preguntas) {
             for (let j = 1; j <= p.escala_maxima; j++) {
                 opciones += `
                     <div class="scale-box">
-                        <input type="radio" id="dP${p.id}-${j}" name="dP${p.id}" value="${j}" required onchange="actualizarContadorComentarios()">
+                        <input type="radio" id="dP${p.id}-${j}" name="dP${p.id}" value="${j}" required>
                         <label for="dP${p.id}-${j}">${j}</label>
                     </div>`;
             }
@@ -344,6 +360,9 @@ function construirPreguntas(preguntas) {
 
 txtComentarios.addEventListener('input', actualizarContadorComentarios);
 inputCalificacionDirecta.addEventListener('input', actualizarContadorComentarios);
+formEvaluacion.addEventListener('change', (e) => {
+    if (e.target.matches('input[type="radio"]')) actualizarContadorComentarios();
+});
 
 function actualizarContadorComentarios() {
     const texto = txtComentarios.value.trim();
@@ -360,8 +379,6 @@ function actualizarContadorComentarios() {
         btnEnviarEvaluacion.disabled = true;
     }
 }
-// Los radios de preguntas se generan por innerHTML con onchange="actualizarContadorComentarios()"
-window.actualizarContadorComentarios = actualizarContadorComentarios;
 
 btnEnviarEvaluacion.addEventListener('click', async () => {
     if (!idSeminarioActivo) return;
@@ -372,8 +389,7 @@ btnEnviarEvaluacion.addEventListener('click', async () => {
     const payload = {
         comentarios: txtComentarios.value.trim(),
         respuestas: esFaseDirecta ? [] : preguntasActuales.map(p => ({
-            texto: p.texto,
-            escala_maxima: p.escala_maxima,
+            id: p.id,
             puntaje: Number(document.querySelector(`input[name="dP${p.id}"]:checked`)?.value)
         }))
     };

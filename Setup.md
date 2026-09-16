@@ -112,6 +112,7 @@ Si no se está seguro de si hay un proxy en medio, dejar `NUM_PROXIES=0` (el val
 - En producción asegúrate de que `DEBUG=False` (en desarrollo puedes usar `DEBUG=True` para ver logs detallados)
 - Usa contraseñas seguras (mín 8 caracteres, letras + números + símbolos)
 - Cambia `ADMIN_PASS` después de la primera ejecución
+- `FORCE_SECURE_COOKIES` (por defecto `True`) obliga a que las cookies viajen por HTTPS sin importar `DEBUG`; si lo pones en `False` con `DEBUG=False` el servidor se niega a arrancar
 
 ---
 
@@ -142,6 +143,106 @@ CREATE USER 'app_unida'@'localhost' IDENTIFIED BY 'tu_contraseña';
 GRANT ALL PRIVILEGES ON unida_seminarios.* TO 'app_unida'@'localhost';
 FLUSH PRIVILEGES;
 ```
+
+---
+
+## Migraciones
+
+Cuando se actualice el código del backend a una versión que cambie el esquema de la base de datos, hay que correr la migración correspondiente **una sola vez** en cada servidor (desarrollo, staging, producción) **antes** de reiniciar el servicio.
+
+### Migración: invalidación de JWT (`token_version`)
+
+La versión actual del backend incluye un campo `token_version` en la tabla `usuarios_evaluadores`. Sirve para invalidar JWTs viejos cuando se cambia la contraseña de un usuario o del admin. Si tu base de datos es anterior a este cambio, corre:
+
+```sql
+ALTER TABLE usuarios_evaluadores ADD COLUMN token_version INT NOT NULL DEFAULT 1;
+```
+
+Nota: esta migración invalida todas las sesiones activas de docentes y administradores. Después de aplicarla, esos usuarios deberán volver a iniciar sesión. Los estudiantes no se ven afectados (su sesión no usa este mecanismo).
+
+Después de correr la migración, reiniciar el servicio:
+```bash
+sudo systemctl restart unida
+```
+
+### Migración: invalidación de JWT para estudiantes (`token_version`)
+
+La versión actual del backend incluye un campo `token_version` también en la tabla `estudiantes`. Sirve para invalidar JWTs viejos cuando se cambia la contraseña de un estudiante. Si tu base de datos es anterior a este cambio, corre:
+
+```sql
+ALTER TABLE estudiantes ADD COLUMN token_version INT NOT NULL DEFAULT 1;
+```
+
+Nota: esta migración invalida todas las sesiones activas de estudiantes, incluidas las sesiones de evaluador cuando el evaluador es un alumno. Después de aplicarla, deberán volver a iniciar sesión.
+
+Después de correr la migración, reiniciar el servicio:
+```bash
+sudo systemctl restart unida
+```
+
+### Migración: bloqueo por IP+cuenta
+
+La versión actual del backend incluye una tabla `intentos_login` para bloquear intentos de login fallidos repetidos desde la misma IP contra la misma cuenta. Si tu base de datos es anterior a este cambio, crea la tabla con:
+
+```sql
+CREATE TABLE intentos_login (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    ip VARCHAR(45) NOT NULL,
+    usuario VARCHAR(100) NOT NULL,
+    intentos INT NOT NULL DEFAULT 0,
+    ultimo_intento DATETIME NULL,
+    bloqueado_hasta DATETIME NULL,
+    UNIQUE KEY uq_intentos_ip_usuario (ip, usuario),
+    INDEX idx_intentos_ip (ip),
+    INDEX idx_intentos_usuario (usuario)
+);
+```
+
+Nota: esta migración no afecta sesiones activas, solo agrega el mecanismo de bloqueo para intentos de login futuros en `/login`, `/login-estudiante` y `/login-alumno-evaluador`.
+
+Después de correr la migración, reiniciar el servicio:
+```bash
+sudo systemctl restart unida
+```
+
+---
+
+## Rotación de secretos
+
+El `JWT_SECRET` del archivo `.env` firma todos los tokens de sesión. Si se filtra (por ejemplo, porque el `.env` se compartió por error, se subió a un repositorio, o el servidor fue comprometido), cualquier persona con ese valor puede emitir tokens válidos y hacerse pasar por cualquier usuario.
+
+### Cuándo rotar el `JWT_SECRET`
+
+- Sospecha o confirmación de filtración del archivo `.env`.
+- Cambio de personal con acceso al servidor o al repositorio.
+- Auditoría de seguridad externa.
+- Como medida preventiva anual.
+
+### Cómo rotar el `JWT_SECRET`
+
+1. Generar un nuevo secret:
+   ```bash
+   python -c "import secrets; print(secrets.token_hex(32))"
+   ```
+2. Reemplazar el valor de `JWT_SECRET` en el archivo `.env` del servidor.
+3. Reiniciar el servicio:
+   ```bash
+   sudo systemctl restart unida
+   ```
+
+Efecto inmediato: todas las sesiones activas quedan invalidadas. Docentes, administradores, estudiantes y evaluadores externos deberán volver a iniciar sesión. Esto es deseable en un escenario de filtración.
+
+### Cómo verificar que la rotación funcionó
+
+- Revisar `logs/unida_auditoria.log` y confirmar que ya no se aceptan peticiones con tokens firmados por el secret viejo.
+- Probar un login nuevo y verificar que funciona.
+- Probar un token viejo (si se conserva alguno) y verificar que es rechazado.
+
+### Prevención
+
+- Nunca subir el `.env` a un repositorio.
+- Revisar `git log` periódicamente por si el `.env` se commiteó alguna vez.
+- Considerar un gestor de secretos en producción (Vault, AWS Secrets Manager, etc.) si el proyecto crece.
 
 ---
 

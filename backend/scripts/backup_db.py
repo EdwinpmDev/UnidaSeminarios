@@ -12,7 +12,7 @@ BACKUPS_DIR = os.path.join(BACKEND_DIR, "backups")
 sys.path.insert(0, BACKEND_DIR)
 
 try:
-    from config import DATABASE_URL
+    from config import BACKUP_GPG_RECIPIENT, DATABASE_URL
 except ImportError as e:
     print(f"❌ Error de importación: {e}")
     print("Revisa que estés ejecutando el script desde el entorno virtual del proyecto.")
@@ -33,6 +33,40 @@ def parsear_credenciales():
 def nombre_backup():
     marca = datetime.now().strftime("%Y%m%d_%H%M%S")
     return f"unida_{marca}.sql.gz"
+
+
+def cifrar_backup(ruta):
+    if not BACKUP_GPG_RECIPIENT:
+        print("⚠️  BACKUP_GPG_RECIPIENT no está definido, el backup no se cifrará.")
+        return ruta
+
+    destino = ruta + ".gpg"
+    # se usa --trusted-key en vez de --trust-model always para confiar solo en este fingerprint, no en cualquier clave del keyring
+    comando = [
+        "gpg", "--yes", "--batch",
+        "--trusted-key", BACKUP_GPG_RECIPIENT,
+        "--recipient", BACKUP_GPG_RECIPIENT,
+        "--output", destino,
+        "--encrypt", ruta,
+    ]
+    proceso = subprocess.run(comando, capture_output=True)
+    if proceso.returncode != 0:
+        print(f"❌ gpg falló al cifrar: {proceso.stderr.decode(errors='replace')}")
+        os.remove(ruta)
+        sys.exit(1)
+
+    os.remove(ruta)
+    return destino
+
+
+def descifrar_backup(ruta):
+    destino = ruta[: -len(".gpg")]
+    comando = ["gpg", "--yes", "--batch", "--output", destino, "--decrypt", ruta]
+    proceso = subprocess.run(comando, capture_output=True)
+    if proceso.returncode != 0:
+        print(f"❌ gpg falló al descifrar: {proceso.stderr.decode(errors='replace')}")
+        sys.exit(1)
+    return destino
 
 
 def comando_backup():
@@ -62,15 +96,17 @@ def comando_backup():
     with gzip.open(destino, "wb") as archivo:
         archivo.write(proceso.stdout)
 
-    tamano_mb = os.path.getsize(destino) / (1024 * 1024)
-    print(f"✅ Backup guardado en {destino} ({tamano_mb:.2f} MB)")
+    destino_final = cifrar_backup(destino)
+
+    tamano_mb = os.path.getsize(destino_final) / (1024 * 1024)
+    print(f"✅ Backup guardado en {destino_final} ({tamano_mb:.2f} MB)")
 
 
 def listar_backups():
     if not os.path.isdir(BACKUPS_DIR):
         return []
     return sorted(
-        [f for f in os.listdir(BACKUPS_DIR) if f.endswith(".sql.gz")],
+        [f for f in os.listdir(BACKUPS_DIR) if f.endswith(".sql.gz") or f.endswith(".sql.gz.gpg")],
         reverse=True,
     )
 
@@ -111,6 +147,13 @@ def comando_restore(nombre_archivo):
         print("Operación cancelada.")
         return
 
+    ruta_sql_gz = ruta
+    ruta_temporal = None
+    if ruta.endswith(".gpg"):
+        print("Descifrando backup...")
+        ruta_temporal = descifrar_backup(ruta)
+        ruta_sql_gz = ruta_temporal
+
     comando = [
         "mysql",
         "-h", cred["host"],
@@ -121,8 +164,12 @@ def comando_restore(nombre_archivo):
     ]
 
     print(f"Restaurando desde {nombre_archivo}...")
-    with gzip.open(ruta, "rb") as archivo:
-        proceso = subprocess.run(comando, stdin=archivo, capture_output=True)
+    try:
+        with gzip.open(ruta_sql_gz, "rb") as archivo:
+            proceso = subprocess.run(comando, stdin=archivo, capture_output=True)
+    finally:
+        if ruta_temporal:
+            os.remove(ruta_temporal)
 
     if proceso.returncode != 0:
         print(f"❌ mysql falló: {proceso.stderr.decode(errors='replace')}")

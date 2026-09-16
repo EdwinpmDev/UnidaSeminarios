@@ -1,5 +1,7 @@
-import random
+import json
+import os
 import re
+import secrets
 import string
 import unicodedata
 from datetime import datetime, timedelta
@@ -9,10 +11,12 @@ from openpyxl.styles import Font, PatternFill
 
 VENTANA_EVALUACION_HORAS = 72
 
+RUTA_PREGUNTAS = os.path.join(os.path.dirname(__file__), "..", "preguntas.json")
+
 NOMBRE_REGEX = re.compile(r'^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\s]+$')
 CORREO_REGEX = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]{2,}$')
 NUMERO_CONTROL_REGEX = re.compile(r'^\d{8,}$')
-PASSWORD_ESTUDIANTE_REGEX = re.compile(r'^[A-Za-z0-9]{4,}$')
+PASSWORD_ESTUDIANTE_REGEX = re.compile(r'^\d{6,}$')
 CLAVE_ACCESO_REGEX = re.compile(r'^[A-Z0-9]{4,20}$')
 
 PROGRAMAS_VALIDOS = {"Maestría", "Doctorado"}
@@ -52,20 +56,30 @@ def validar_longitud(texto, maximo):
     return len(texto) <= maximo
 
 
+# Caracteres que Excel/LibreOffice/Sheets pueden interpretar como inicio de fórmula
+CARACTERES_PELIGROSOS_EXCEL = ("=", "+", "-", "@", "\t", "\r", "%", "(", "[", "{", "|", ";", ",", "`", "~", "!", "$", "^")
+
+
 def sanitizar_celda_excel(valor):
     if valor is None:
         return valor
     texto = str(valor)
     if not texto:
         return texto
-    if texto[0] in ("=", "+", "-", "@", "\t", "\r"):
+    if texto[0] in CARACTERES_PELIGROSOS_EXCEL:
         return "'" + texto
     return texto
 
 
+def escribir_celda_texto(ws, fila, columna, valor):
+    celda = ws.cell(row=fila, column=columna, value=sanitizar_celda_excel(valor))
+    celda.data_type = 's'  # Fuerza tipo texto para que Excel no evalúe fórmulas
+    return celda
+
+
 def generar_clave_acceso():
     caracteres = string.ascii_uppercase + string.digits
-    return ''.join(random.choice(caracteres) for _ in range(8))
+    return ''.join(secrets.choice(caracteres) for _ in range(8))
 
 
 def parsear_jurado(jurado_texto):
@@ -150,3 +164,72 @@ def aplicar_formato_excel(ws):
             except Exception:
                 pass
         ws.column_dimensions[col_letter].width = max_length + 2
+
+
+def es_seminario_de_estudiante(session, id_seminario, id_estudiante):
+    # Import local para evitar dependencia circular utils.py - models.py
+    from models import Seminario
+    return session.query(Seminario).filter_by(id=id_seminario, estudiante_id=id_estudiante).first() is not None
+
+
+def obtener_banco_preguntas(programa, fase):
+    fase_normalizada = "Tutorial" if "tutorial" in (fase or "").lower() else fase
+    llave = f"{programa}_{fase_normalizada}"
+
+    with open(RUTA_PREGUNTAS, "r", encoding="utf-8") as f:
+        banco = json.load(f)
+
+    return banco.get(llave, banco["Global"])
+
+
+def validar_y_reconstruir_respuestas(respuestas_cliente, programa, fase):
+    """
+    Reconstruye respuestas_detalle a partir del banco de preguntas real.
+    Ignora texto/escala_maxima que mande el cliente, solo usa el id para
+    buscar la pregunta real y valida que el puntaje esté en rango.
+    Devuelve (snapshot, None) si todo es válido, o (None, mensaje_error).
+    """
+    if not respuestas_cliente or not isinstance(respuestas_cliente, list):
+        return None, "Faltan las respuestas del cuestionario"
+
+    preguntas_banco = obtener_banco_preguntas(programa, fase)
+    preguntas_por_id = {p["id"]: p for p in preguntas_banco}
+
+    if len(respuestas_cliente) != len(preguntas_banco):
+        return None, "La cantidad de respuestas no coincide con el cuestionario"
+
+    ids_vistos = set()
+    snapshot = []
+    for item in respuestas_cliente:
+        if not isinstance(item, dict):
+            return None, "Respuesta con formato inválido"
+
+        id_pregunta = item.get("id")
+        if not id_pregunta:
+            return None, "Formato de respuestas desactualizado, recarga la página e intenta de nuevo"
+
+        if id_pregunta in ids_vistos:
+            return None, "Hay respuestas duplicadas en el cuestionario"
+        ids_vistos.add(id_pregunta)
+
+        pregunta_real = preguntas_por_id.get(id_pregunta)
+        if not pregunta_real:
+            return None, f"La pregunta {id_pregunta} no existe en el cuestionario"
+
+        puntaje = item.get("puntaje")
+        # bool es subclase de int en Python, se excluye para no aceptar true/false como puntaje
+        if not isinstance(puntaje, (int, float)) or isinstance(puntaje, bool):
+            return None, f"El puntaje de la pregunta {id_pregunta} debe ser numérico"
+
+        escala_real = pregunta_real["escala_maxima"]
+        if puntaje < 0 or puntaje > escala_real:
+            return None, f"El puntaje de la pregunta {id_pregunta} está fuera de rango"
+
+        snapshot.append({
+            "id": id_pregunta,
+            "texto": pregunta_real["texto"],
+            "escala_maxima": escala_real,
+            "puntaje": puntaje,
+        })
+
+    return snapshot, None

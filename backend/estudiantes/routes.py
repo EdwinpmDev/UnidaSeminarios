@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 import json
 from flask import Blueprint, current_app, jsonify, request
@@ -7,8 +7,6 @@ from sqlalchemy.orm import selectinload
 from werkzeug.security import generate_password_hash
 from zoneinfo import ZoneInfo
 
-import jwt
-from config import JWT_SECRET
 from extensions import Session, limiter
 from models import Estudiante, Evaluacion, Seminario
 from utils import (
@@ -23,15 +21,18 @@ from utils import (
     PASSWORD_ESTUDIANTE_REGEX,
     PROGRAMAS_VALIDOS,
     calcular_ventana_evaluacion,
+    es_seminario_de_estudiante,
     generar_clave_acceso,
     limpiar_texto_libre,
     parsear_jurado,
     validar_longitud,
 )
 
-from auth.decorators import admin_requerido, csrf_protegido, estudiante_requerido, token_esta_revocado, token_requerido, validar_json
+from auth.decorators import admin_requerido, csrf_protegido, estudiante_requerido, token_requerido, validar_json
 
 estudiantes_bp = Blueprint("estudiantes", __name__)
+
+# Todo endpoint con @estudiante_requerido debe validar que el recurso pertenezca a request.id_estudiante_actual
 
 
 def hay_colision_horario(session, fecha_obj, hora_obj, duracion, lugar, excluir_id=None):
@@ -114,7 +115,7 @@ def registrar_estudiante():
         if not NUMERO_CONTROL_REGEX.match(usuarioAlumno):
             return jsonify({"success": False, "mensaje": "El número de control debe contener mínimo 8 números (sin letras)."}), 400
         if password and not PASSWORD_ESTUDIANTE_REGEX.match(password):
-            return jsonify({"success": False, "mensaje": "La contraseña debe contener al menos 4 caracteres/numeros"}), 400
+            return jsonify({"success": False, "mensaje": "La contraseña debe contener al menos 6 números (sin letras ni símbolos)"}), 400
         if correo and not CORREO_REGEX.match(correo):
             return jsonify({"success": False, "mensaje": "El correo no es válido (falta un @ o un dominio, ej. .com)"}), 400
         if not lugar:
@@ -154,6 +155,7 @@ def registrar_estudiante():
             estudiante.programa = programa
             if password:
                 estudiante.password_hash = generate_password_hash(password, method="pbkdf2:sha256", salt_length=16)
+                estudiante.token_version += 1  # invalida cualquier jwt viejo de este estudiante
 
         clave_acceso_input = data.get("clave_acceso", "").strip().upper()
         if clave_acceso_input and not CLAVE_ACCESO_REGEX.match(clave_acceso_input):
@@ -164,13 +166,6 @@ def registrar_estudiante():
             return not session.query(Seminario).filter(
                 (Seminario.clave_acceso == codigo)
             ).first()
-
-        def generar_codigo_unico_global(codigos_usados_en_este_registro):
-            for _ in range(10):
-                candidato = generar_clave_acceso()
-                if candidato not in codigos_usados_en_este_registro and es_codigo_libre(candidato):
-                    return candidato
-            raise ValueError("No se pudo generar un código único tras varios intentos")
 
         intentos = 5
         while not es_codigo_libre(clave_acceso) and intentos > 0:
@@ -208,7 +203,8 @@ def registrar_estudiante():
         return jsonify({"success": False, "mensaje": "Número de control duplicado."}), 400
     except Exception as e:
         session.rollback()
-        return jsonify({"success": False, "error": str(e)}), 500
+        current_app.logger.error(f"error inesperado: {e}")
+        return jsonify({"success": False, "mensaje": "Ocurrió un error interno. Intenta de nuevo."}), 500
     finally:
         session.close()
 
@@ -235,7 +231,7 @@ def registro_publico():
         if not NUMERO_CONTROL_REGEX.match(control):
             return jsonify({"success": False, "mensaje": "El número de control debe contener mínimo 8 números (sin letras)."}), 400
         if not PASSWORD_ESTUDIANTE_REGEX.match(password):
-            return jsonify({"success": False, "mensaje": "La contraseña debe contener al menos 4 letras/números"}), 400
+            return jsonify({"success": False, "mensaje": "La contraseña debe contener al menos 6 números (sin letras ni símbolos)"}), 400
         if not CORREO_REGEX.match(correo):
             return jsonify({"success": False, "mensaje": "El correo no es válido (falta un @ o un dominio, ej. .com)"}), 400
         if programa not in ("Maestría", "Doctorado"):
@@ -260,7 +256,8 @@ def registro_publico():
         return jsonify({"success": False, "mensaje": "Número de control duplicado."}), 400
     except Exception as e:
         session.rollback()
-        return jsonify({"success": False, "error": str(e)}), 500
+        current_app.logger.error(f"error inesperado: {e}")
+        return jsonify({"success": False, "mensaje": "Ocurrió un error interno. Intenta de nuevo."}), 500
     finally:
         session.close()
 
@@ -356,7 +353,8 @@ def editar_seminario(id_seminario):
         return jsonify({"success": True, "mensaje": "Información del seminario actualizada"})
     except Exception as e:
         session.rollback()
-        return jsonify({"success": False, "error": str(e)}), 500
+        current_app.logger.error(f"error inesperado: {e}")
+        return jsonify({"success": False, "mensaje": "Ocurrió un error interno. Intenta de nuevo."}), 500
     finally:
         session.close()
 
@@ -421,12 +419,13 @@ def obtener_estudiantes():
         for est in estudiantes:
             sems_list = []
             activos = 0
-            for s in est.seminarios:
+            for s in sorted(est.seminarios, key=lambda s: s.fecha or date.min, reverse=True):
                 evals = s.evaluaciones
                 tiene_evaluaciones = len(evals) > 0
 
                 # Un seminario sigue activo mientras su ventana de evaluación no haya vencido
-                plazo_vencido = calcular_ventana_evaluacion(s)["estado"] == "caducado"
+                ventana = calcular_ventana_evaluacion(s)
+                plazo_vencido = ventana["estado"] == "caducado"
                 es_evaluado = plazo_vencido
 
                 if not es_evaluado:
@@ -444,17 +443,15 @@ def obtener_estudiantes():
                 sems_list.append({
                     "id_seminario": s.id, "proyecto": s.proyecto, "tipo_seminario": s.tipo_seminario,
                     "clave_acceso": s.clave_acceso, "calificacion": promedio_str,
-                    "es_evaluado": es_evaluado, "plazo_vencido": plazo_vencido,
+                    "es_evaluado": es_evaluado, "plazo_vencido": plazo_vencido, "estado_ventana": ventana["estado"],
                     "presidente": jurado.get("Presidente", ""),
                     "secretario": jurado.get("Secretario", ""),
                     "vocal": jurado.get("Vocal", ""),
-                    "fecha": str(s.fecha) if s.fecha else "", "hora": s.hora.strftime("%H:%M") if s.hora else "",
+                    "fecha": s.fecha.strftime("%d/%m/%Y") if s.fecha else "", "fecha_raw": str(s.fecha) if s.fecha else "", "hora": s.hora.strftime("%H:%M") if s.hora else "",
                     "lugar": s.lugar or "", "modalidad": s.modalidad or "",
                     "programa_historico": s.programa_historico or est.programa,
                     "evaluaciones_detalle": evals_det
                 })
-
-            sems_list.sort(key=lambda x: x['fecha'], reverse=True)
             lista.append({
                 "id_estudiante": est.id, "nombre": est.nombre, "usuarioAlumno": est.usuarioAlumno,
                 "correo": est.correo, "programa": est.programa, "seminarios_activos": activos,
@@ -470,7 +467,8 @@ def obtener_estudiantes():
         }), 200
     except Exception as e:
         session.rollback()
-        return jsonify({"success": False, "error": str(e)}), 500
+        current_app.logger.error(f"error inesperado: {e}")
+        return jsonify({"success": False, "mensaje": "Ocurrió un error interno. Intenta de nuevo."}), 500
     finally:
         session.close()
 
@@ -511,14 +509,16 @@ def editar_solo_estudiante(id_estudiante):
         pw = data.get("password_estudiante", "").strip()
         if pw:
             if not PASSWORD_ESTUDIANTE_REGEX.match(pw):
-                return jsonify({"success": False, "mensaje": "La contraseña debe contener al menos 4 letras/numeros."}), 400
+                return jsonify({"success": False, "mensaje": "La contraseña debe contener al menos 6 números (sin letras ni símbolos)."}), 400
             est.password_hash = generate_password_hash(pw, method="pbkdf2:sha256", salt_length=16)
+            est.token_version += 1  # invalida cualquier jwt viejo de este estudiante
 
         session.commit()
         return jsonify({"success": True, "mensaje": "Datos del alumno actualizados exitosamente."})
     except Exception as e:
         session.rollback()
-        return jsonify({"success": False, "error": str(e)}), 500
+        current_app.logger.error(f"error inesperado: {e}")
+        return jsonify({"success": False, "mensaje": "Ocurrió un error interno. Intenta de nuevo."}), 500
     finally:
         session.close()
 
@@ -582,7 +582,7 @@ def buscar_alumnos_simple():
         }), 200
     except Exception as e:
         current_app.logger.error(f"Error en búsqueda simple: {e}")
-        return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({"success": False, "mensaje": "Ocurrió un error interno. Intenta de nuevo."}), 500
     finally:
         session.close()
 
@@ -655,26 +655,18 @@ def actualizar_mi_correo():
         return jsonify({"success": True, "mensaje": "Tu correo institucional fue actualizado.", "correo": estudiante.correo}), 200
     except Exception as e:
         session.rollback()
-        return jsonify({"success": False, "error": str(e)}), 500
+        current_app.logger.error(f"error inesperado: {e}")
+        return jsonify({"success": False, "mensaje": "Ocurrió un error interno. Intenta de nuevo."}), 500
     finally:
         session.close()
 
 
 @estudiantes_bp.route("/mi-informacion", methods=["GET"])
+@estudiante_requerido
 def mi_informacion():
-    token = request.cookies.get('unida_token')
-    if not token:
-        return jsonify({"success": False}), 401
-
     session = Session()
     try:
-        data = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
-        if token_esta_revocado(data.get("jti")):
-            return jsonify({"success": False}), 401
-        if data.get("rol") != "estudiante":
-            return jsonify({"success": False}), 403
-
-        estudiante = session.query(Estudiante).filter_by(id=data["id_estudiante"]).first()
+        estudiante = session.query(Estudiante).filter_by(id=request.id_estudiante_actual).first()
         if not estudiante:
             return jsonify({"success": False}), 404
 
@@ -690,6 +682,8 @@ def mi_informacion():
 
         lista_seminarios = []
         for sem in seminarios_db:
+            if not es_seminario_de_estudiante(session, sem.id, estudiante.id):
+                continue
             evals = session.query(Evaluacion).filter_by(seminario_id=sem.id).all()
             promedio = round(sum(e.calificacion_final for e in evals) / len(evals), 1) if len(evals) > 0 else None
 
@@ -710,7 +704,8 @@ def mi_informacion():
                 "id_seminario": sem.id,
                 "proyecto": sem.proyecto,
                 "tipo_seminario": sem.tipo_seminario,
-                "fecha": str(sem.fecha) if sem.fecha else "Por definir",
+                "fecha": sem.fecha.strftime("%d/%m/%Y") if sem.fecha else "Por definir",
+                "fecha_raw": str(sem.fecha) if sem.fecha else "",
                 "hora": str(sem.hora) if sem.hora else "Por definir",
                 "lugar": sem.lugar or "Por definir",
                 "modalidad": sem.modalidad or "Por definir",

@@ -174,7 +174,7 @@ main {
     margin-top: 15px;
 }
 
-/* Ventana de login (Modal) */
+/* Ventana de login (modal) */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -203,7 +203,7 @@ main {
     color: var(--primary);
 }
 
-/* Estilos cuestionario (Quest) */
+/* Estilos cuestionario (quest) */
 .quest-card {
     background: #fff;
     border: 1px solid #e2e8f0;
@@ -356,7 +356,7 @@ footer {
     font-size: 0.8rem;
     border-top: 3px solid var(--accent);
 }
-/* --- Toast (antes vivía como estilos inline en evaluacion.js) --- */
+/* --- Toast --- */
 #toast-container {
     position: fixed;
     bottom: 24px;

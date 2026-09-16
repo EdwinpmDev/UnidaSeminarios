@@ -78,6 +78,7 @@ def restaurar_admin(usuario, password, confirmar=True):
 
             admin.usuario = usuario
             admin.password_hash = hash_nuevo
+            admin.token_version += 1  # invalida cualquier jwt viejo del admin
             session.commit()
             print(f"✅ Credenciales del administrador restauradas (id {admin.id}).")
         else:
@@ -116,15 +117,10 @@ def main():
     print("🔐 ACCESO DE ADMINISTRADOR RESTAURADO")
     print("=" * 60)
     print(f"   Usuario:     {usuario}")
-    print(f"   Contraseña:  {password}")
     print("=" * 60)
-    print("Inicia sesión con estos datos en la pantalla de login y")
-    print("cambia la contraseña desde el panel ('Editar mi perfil')")
-    print("en cuanto puedas.")
-    print("\n⚠️  Este script se ejecuta desde SSH/terminal directamente")
-    print("   en el servidor porque muestra la contraseña en texto")
-    print("   plano. No lo corras en una terminal compartida ni")
-    print("   guardes esta salida en ningún lado.")
+    print("Inicia sesión con la contraseña que indicaste en la pantalla")
+    print("de login y cambia la contraseña desde el panel ('Editar mi")
+    print("perfil') en cuanto puedas.")
 
 
 if __name__ == "__main__":

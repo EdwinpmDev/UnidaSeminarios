@@ -64,6 +64,9 @@ header p #nombre-docente {
     border-radius: 6px;
     font-weight: 700;
     font-size: 0.9rem;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
 }
 
 main {
